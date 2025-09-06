@@ -8,11 +8,10 @@ import {
   type Obstacle,
 } from "@/types/game";
 
-const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 400;
-const GROUND_Y = 320;
-const CAT_WIDTH = 44;
-const CAT_HEIGHT = 24;
+const GROUND_Y = 300;
+const CAT_WIDTH = 100;
+const CAT_HEIGHT = 100;
 const GRAVITY = 0.8;
 const JUMP_FORCE = -15;
 const DEBUG_COLLISION = false; // Set to true to see collision boxes
@@ -27,6 +26,7 @@ export default function GameCanvas({
   onStageComplete,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [canvasWidth, setCanvasWidth] = useState<number>(window.innerWidth);
   const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.START);
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
@@ -35,14 +35,30 @@ export default function GameCanvas({
     isGameOver: false,
     speed: 2,
   });
+  // 화면 크기 변경 시 캔버스 크기 동적 적용
+  useEffect(() => {
+    const handleResize = () => {
+      setCanvasWidth(window.innerWidth);
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.width = window.innerWidth;
+        canvas.height = CANVAS_HEIGHT;
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
+  // 초기 렌더링 위치, 고양이 크기 변경, 속도 조정, 히트 박스
   const [cat, setCat] = useState<Cat>({
+    // 초기 렌더링 위치 (바닥에 딱 붙게)
     position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
     velocity: { x: 0, y: 0 },
     size: { width: CAT_WIDTH, height: CAT_HEIGHT },
     collisionBox: {
-      offset: { x: 8, y: 8 }, // Start collision box 8px inside the PNG
-      size: { width: 28, height: 28 }, // Smaller collision box for just the cat body
+      offset: { x: 2.5, y: 2.5 }, // 8px(SVG) * 100/320 = 2.5px
+      size: { width: CAT_WIDTH, height: CAT_HEIGHT }, // 히트박스 크기도 필요시 비율 변환
     },
     isJumping: false,
     isSliding: false,
@@ -113,15 +129,31 @@ export default function GameCanvas({
   // Handle keyboard input
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (gamePhase === GamePhase.START && e.code === "Space" && imagesLoaded) {
+      // 시작 화면: 스페이스 또는 방향키 위
+      if (
+        gamePhase === GamePhase.START &&
+        (e.code === "Space" || e.code === "ArrowUp") &&
+        imagesLoaded
+      ) {
         startGame();
-      } else if (gamePhase === GamePhase.PLAYING) {
-        if (e.code === "Space" && !cat.isJumping && !cat.isSliding) {
+      }
+      // 플레이 중: 스페이스 또는 방향키 위 = 점프, 방향키 아래 = 슬라이드
+      else if (gamePhase === GamePhase.PLAYING) {
+        if (
+          (e.code === "Space" || e.code === "ArrowUp") &&
+          !cat.isJumping &&
+          !cat.isSliding
+        ) {
           jump();
         } else if (e.code === "ArrowDown" && !cat.isJumping && !cat.isSliding) {
           slide();
         }
-      } else if (gamePhase === GamePhase.GAME_OVER && e.code === "Space") {
+      }
+      // 게임 오버: 스페이스 또는 방향키 위
+      else if (
+        gamePhase === GamePhase.GAME_OVER &&
+        (e.code === "Space" || e.code === "ArrowUp")
+      ) {
         resetGame();
       }
     };
@@ -178,7 +210,7 @@ export default function GameCanvas({
       speed: 2,
     });
     setCat({
-      position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
+      position: { x: 50, y: 0 },
       velocity: { x: 0, y: 0 },
       size: { width: CAT_WIDTH, height: CAT_HEIGHT },
       collisionBox: {
@@ -201,19 +233,19 @@ export default function GameCanvas({
 
     if (randomType === "bird") {
       newObstacle = {
-        position: { x: CANVAS_WIDTH, y: GROUND_Y - 80 }, // Higher up for bird
+        position: { x: canvasWidth, y: GROUND_Y - 80 }, // Higher up for bird
         size: { width: 25, height: 20 },
         type: "bird",
       };
     } else if (randomType === "rock") {
       newObstacle = {
-        position: { x: CANVAS_WIDTH, y: GROUND_Y - 25 },
+        position: { x: canvasWidth, y: GROUND_Y - 25 },
         size: { width: 25, height: 25 },
         type: "rock",
       };
     } else {
       newObstacle = {
-        position: { x: CANVAS_WIDTH, y: GROUND_Y - 30 },
+        position: { x: canvasWidth, y: GROUND_Y - 30 },
         size: { width: 20, height: 30 },
         type: "cactus",
       };
@@ -345,44 +377,44 @@ export default function GameCanvas({
     if (!ctx) return;
 
     // Clear canvas
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    ctx.clearRect(0, 0, canvasWidth, CANVAS_HEIGHT);
 
     if (gamePhase === GamePhase.START) {
       // Start screen
       ctx.fillStyle = "#333333";
       ctx.font = "32px Arial";
       ctx.textAlign = "center";
-      ctx.fillText("Cat Runner", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 50);
+      ctx.fillText("Cat Runner", canvasWidth / 2, CANVAS_HEIGHT / 2 - 50);
       ctx.font = "16px Arial";
 
       if (!imagesLoaded) {
         ctx.fillText(
           "Loading cat sprites...",
-          CANVAS_WIDTH / 2,
+          canvasWidth / 2,
           CANVAS_HEIGHT / 2
         );
         ctx.font = "12px Arial";
         ctx.fillText(
           `Images loaded: ${Object.keys(images).length}/3`,
-          CANVAS_WIDTH / 2,
+          canvasWidth / 2,
           CANVAS_HEIGHT / 2 + 20
         );
       } else {
         ctx.fillText(
           "Press SPACE to start",
-          CANVAS_WIDTH / 2,
+          canvasWidth / 2,
           CANVAS_HEIGHT / 2
         );
         ctx.fillText(
           "SPACE: Jump, ↓: Slide",
-          CANVAS_WIDTH / 2,
+          canvasWidth / 2,
           CANVAS_HEIGHT / 2 + 30
         );
       }
     } else if (gamePhase === GamePhase.PLAYING) {
       // Draw ground
       ctx.fillStyle = "#999999";
-      ctx.fillRect(0, GROUND_Y, CANVAS_WIDTH, 2);
+      ctx.fillRect(0, GROUND_Y, canvasWidth, 2);
 
       // Draw score and stage info
       ctx.fillStyle = "#333333";
@@ -399,15 +431,15 @@ export default function GameCanvas({
       // Stage progress bar (shows progress to next stage)
       const stageProgress = (gameState.score % 1000) / 1000;
       ctx.fillStyle = "#E5E5E5";
-      ctx.fillRect(CANVAS_WIDTH - 220, 20, 200, 10);
+      ctx.fillRect(canvasWidth - 220, 20, 200, 10);
       ctx.fillStyle = "#4CAF50";
-      ctx.fillRect(CANVAS_WIDTH - 220, 20, 200 * stageProgress, 10);
+      ctx.fillRect(canvasWidth - 220, 20, 200 * stageProgress, 10);
       ctx.fillStyle = "#333333";
       ctx.font = "12px Arial";
       ctx.textAlign = "right";
       ctx.fillText(
         `Next Stage: ${Math.floor(stageProgress * 100)}%`,
-        CANVAS_WIDTH - 20,
+        canvasWidth - 20,
         45
       );
 
@@ -476,28 +508,29 @@ export default function GameCanvas({
       ctx.fillStyle = "#333333";
       ctx.font = "32px Arial";
       ctx.textAlign = "center";
-      ctx.fillText("GAME OVER", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 50);
+      ctx.fillText("GAME OVER", canvasWidth / 2, CANVAS_HEIGHT / 2 - 50);
       ctx.font = "18px Arial";
       ctx.fillText(
         `Final Score: ${gameState.score.toString().padStart(5, "0")}`,
-        CANVAS_WIDTH / 2,
+        canvasWidth / 2,
         CANVAS_HEIGHT / 2
       );
       ctx.font = "16px Arial";
       ctx.fillText(
         "Press SPACE to restart",
-        CANVAS_WIDTH / 2,
+        canvasWidth / 2,
         CANVAS_HEIGHT / 2 + 40
       );
     }
   }, [gamePhase, cat, obstacles, gameState, images, imagesLoaded]);
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4 w-full">
       <canvas
         ref={canvasRef}
-        width={CANVAS_WIDTH}
+        width={canvasWidth}
         height={CANVAS_HEIGHT}
+        style={{ width: "100%", height: `${CANVAS_HEIGHT}px` }}
         className="game-canvas border border-gray-300"
       />
       <div className="text-sm text-gray-600 text-center">
