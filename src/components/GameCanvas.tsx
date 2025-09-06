@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   GamePhase,
   type GameState,
@@ -26,8 +26,28 @@ export default function GameCanvas({
   onStageComplete,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [canvasWidth, setCanvasWidth] = useState<number>(window.innerWidth);
+  const animationFrameId = useRef<number>();
+
+  const [canvasWidth, setCanvasWidth] = useState<number>(0);
   const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.START);
+  const [images, setImages] = useState<{ [key: string]: HTMLImageElement }>({});
+  const [imagesLoaded, setImagesLoaded] = useState(false);
+
+  // Use state for rendering
+  const [cat, setCat] = useState<Cat>({
+    position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
+    velocity: { x: 0, y: 0 },
+    size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+    collisionBox: {
+      offset: { x: 8, y: 8 },
+      size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+    },
+    isJumping: false,
+    isSliding: false,
+    sprite: "bcat",
+  });
+
+  const [obstacles, setObstacles] = useState<Obstacle[]>([]);
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
     stage: 1,
@@ -35,7 +55,70 @@ export default function GameCanvas({
     isGameOver: false,
     speed: 2,
   });
-  // 화면 크기 변경 시 캔버스 크기 동적 적용
+
+  // Use refs for game loop logic to get synchronous updates
+  const catRef = useRef(cat);
+  const obstaclesRef = useRef(obstacles);
+  const gameStateRef = useRef(gameState);
+
+  // Sync refs whenever state changes
+  useEffect(() => {
+    catRef.current = cat;
+  }, [cat]);
+  useEffect(() => {
+    obstaclesRef.current = obstacles;
+  }, [obstacles]);
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  // Load images
+  useEffect(() => {
+    const loadImage = (
+      name: string,
+      src: string
+    ): Promise<HTMLImageElement> => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        const timeout = setTimeout(() => {
+          console.warn(`Image loading timeout: ${name}`);
+          reject(new Error(`Timeout loading ${name}`));
+        }, 10000);
+        img.onload = () => {
+          clearTimeout(timeout);
+          setImages((prev) => ({ ...prev, [name]: img }));
+          resolve(img);
+        };
+        img.onerror = (error) => {
+          clearTimeout(timeout);
+          console.error(`❌ Failed to load image: ${name} from ${src}`, error);
+          reject(new Error(`Failed to load ${name}`));
+        };
+        img.src = src;
+      });
+    };
+
+    const imageList = [
+      { name: "bcat", src: "/bcat.svg" },
+      { name: "bcat_jump", src: "/bcat_jump.svg" },
+      { name: "bcat_sliding", src: "/bcat_slide.svg" },
+    ];
+
+    const loadAllImages = async () => {
+      try {
+        await Promise.all(imageList.map(({ name, src }) => loadImage(name, src)));
+        console.log("🎉 All cat images loaded successfully");
+        setImagesLoaded(true);
+      } catch (error) {
+        console.error("🚨 Some images failed to load:", error);
+      }
+    };
+
+    loadAllImages();
+  }, []);
+
+  // Handle resize
   useEffect(() => {
     const handleResize = () => {
       setCanvasWidth(window.innerWidth);
@@ -50,212 +133,7 @@ export default function GameCanvas({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // 초기 렌더링 위치, 고양이 크기 변경, 속도 조정, 히트 박스
-  const [cat, setCat] = useState<Cat>({
-    // 초기 렌더링 위치 (바닥에 딱 붙게)
-    position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
-    velocity: { x: 0, y: 0 },
-    size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-    collisionBox: {
-      offset: { x: 2.5, y: 2.5 }, // 8px(SVG) * 100/320 = 2.5px
-      size: { width: CAT_WIDTH, height: CAT_HEIGHT }, // 히트박스 크기도 필요시 비율 변환
-    },
-    isJumping: false,
-    isSliding: false,
-    sprite: "bcat",
-  });
-
-  const [obstacles, setObstacles] = useState<Obstacle[]>([]);
-  const [images, setImages] = useState<{ [key: string]: HTMLImageElement }>({});
-  const [imagesLoaded, setImagesLoaded] = useState(false);
-
-  // Load images
-  useEffect(() => {
-    const loadImage = (
-      name: string,
-      src: string
-    ): Promise<HTMLImageElement> => {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous"; // Handle CORS if needed
-
-        const timeout = setTimeout(() => {
-          console.warn(`Image loading timeout: ${name}`);
-          reject(new Error(`Timeout loading ${name}`));
-        }, 10000); // 10 second timeout
-
-        img.onload = () => {
-          clearTimeout(timeout);
-          console.log(
-            `✅ Image loaded successfully: ${name} (${img.naturalWidth}x${img.naturalHeight})`
-          );
-          setImages((prev) => ({ ...prev, [name]: img }));
-          resolve(img);
-        };
-
-        img.onerror = (error) => {
-          clearTimeout(timeout);
-          console.error(`❌ Failed to load image: ${name} from ${src}`, error);
-          reject(new Error(`Failed to load ${name}`));
-        };
-
-        console.log(`🔄 Loading image: ${name} from ${src}`);
-        img.src = src;
-      });
-    };
-
-    const imageList = [
-      { name: "bcat", src: "/bcat.svg" },
-      { name: "bcat_jump", src: "/bcatt_jump.png" },
-      { name: "bcat_sliding", src: "/bcatt_slide.png" },
-    ];
-
-    // Load images sequentially to avoid overwhelming the browser
-    const loadAllImages = async () => {
-      try {
-        for (const { name, src } of imageList) {
-          await loadImage(name, src);
-        }
-        console.log("🎉 All cat images loaded successfully");
-        setImagesLoaded(true);
-      } catch (error) {
-        console.error("🚨 Some images failed to load:", error);
-      }
-    };
-
-    loadAllImages();
-  }, []);
-
-  // Handle keyboard input
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // 시작 화면: 스페이스 또는 방향키 위
-      if (
-        gamePhase === GamePhase.START &&
-        (e.code === "Space" || e.code === "ArrowUp") &&
-        imagesLoaded
-      ) {
-        startGame();
-      }
-      // 플레이 중: 스페이스 또는 방향키 위 = 점프, 방향키 아래 = 슬라이드
-      else if (gamePhase === GamePhase.PLAYING) {
-        if (
-          (e.code === "Space" || e.code === "ArrowUp") &&
-          !cat.isJumping &&
-          !cat.isSliding
-        ) {
-          jump();
-        } else if (e.code === "ArrowDown" && !cat.isJumping && !cat.isSliding) {
-          slide();
-        }
-      }
-      // 게임 오버: 스페이스 또는 방향키 위
-      else if (
-        gamePhase === GamePhase.GAME_OVER &&
-        (e.code === "Space" || e.code === "ArrowUp")
-      ) {
-        resetGame();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [gamePhase, cat, imagesLoaded]);
-
-  const startGame = () => {
-    setGamePhase(GamePhase.PLAYING);
-    setGameState((prev) => ({ ...prev, isPlaying: true, isGameOver: false }));
-  };
-
-  const jump = () => {
-    setCat((prev) => ({
-      ...prev,
-      velocity: { ...prev.velocity, y: JUMP_FORCE },
-      isJumping: true,
-      sprite: "bcat_jump",
-    }));
-  };
-
-  const slide = () => {
-    setCat((prev) => ({
-      ...prev,
-      isSliding: true,
-      sprite: "bcat_sliding",
-      collisionBox: {
-        offset: { x: 8, y: 16 }, // Higher Y offset when sliding
-        size: { width: 28, height: 20 }, // Shorter collision box when sliding
-      },
-    }));
-
-    setTimeout(() => {
-      setCat((prev) => ({
-        ...prev,
-        isSliding: false,
-        sprite: "bcat",
-        collisionBox: {
-          offset: { x: 8, y: 8 },
-          size: { width: 28, height: 28 },
-        },
-      }));
-    }, 500);
-  };
-
-  const resetGame = () => {
-    setGamePhase(GamePhase.START);
-    setGameState({
-      score: 0,
-      stage: 1,
-      isPlaying: false,
-      isGameOver: false,
-      speed: 2,
-    });
-    setCat({
-      position: { x: 50, y: 0 },
-      velocity: { x: 0, y: 0 },
-      size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-      collisionBox: {
-        offset: { x: 8, y: 8 },
-        size: { width: 28, height: 28 },
-      },
-      isJumping: false,
-      isSliding: false,
-      sprite: "bcat",
-    });
-    setObstacles([]);
-  };
-
-  const spawnObstacle = () => {
-    const obstacleTypes = ["cactus", "rock", "bird"] as const;
-    const randomType =
-      obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-
-    let newObstacle: Obstacle;
-
-    if (randomType === "bird") {
-      newObstacle = {
-        position: { x: canvasWidth, y: GROUND_Y - 80 }, // Higher up for bird
-        size: { width: 25, height: 20 },
-        type: "bird",
-      };
-    } else if (randomType === "rock") {
-      newObstacle = {
-        position: { x: canvasWidth, y: GROUND_Y - 25 },
-        size: { width: 25, height: 25 },
-        type: "rock",
-      };
-    } else {
-      newObstacle = {
-        position: { x: canvasWidth, y: GROUND_Y - 30 },
-        size: { width: 20, height: 30 },
-        type: "cactus",
-      };
-    }
-
-    setObstacles((prev) => [...prev, newObstacle]);
-  };
-
   const checkCollision = (cat: Cat, obstacle: Obstacle): boolean => {
-    // Use the actual collision box instead of the full sprite size
     const catCollisionX = cat.position.x + cat.collisionBox.offset.x;
     const catCollisionY = cat.position.y + cat.collisionBox.offset.y;
     const catCollisionWidth = cat.collisionBox.size.width;
@@ -269,149 +147,242 @@ export default function GameCanvas({
     );
   };
 
-  // Game loop
+  const spawnObstacle = useCallback(() => {
+    const obstacleTypes = ["cactus", "rock", "bird"] as const;
+    const randomType =
+      obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+
+    let newObstacle: Obstacle;
+    const currentCanvasWidth = window.innerWidth;
+
+    if (randomType === "bird") {
+      newObstacle = {
+        position: { x: currentCanvasWidth, y: GROUND_Y - 80 },
+        size: { width: 25, height: 20 },
+        type: "bird",
+      };
+    } else if (randomType === "rock") {
+      newObstacle = {
+        position: { x: currentCanvasWidth, y: GROUND_Y - 25 },
+        size: { width: 25, height: 25 },
+        type: "rock",
+      };
+    } else {
+      newObstacle = {
+        position: { x: currentCanvasWidth, y: GROUND_Y - 30 },
+        size: { width: 20, height: 30 },
+        type: "cactus",
+      };
+    }
+    obstaclesRef.current = [...obstaclesRef.current, newObstacle];
+  }, []);
+
+  const gameLoop = useCallback(() => {
+    // --- Physics and State Updates (using refs) ---
+    const cat = catRef.current;
+    const obstacles = obstaclesRef.current;
+    const gameState = gameStateRef.current;
+
+    // Update cat physics
+    let newY = cat.position.y + cat.velocity.y;
+    let newVelY = cat.velocity.y + GRAVITY;
+    let isJumping = cat.isJumping;
+
+    if (newY >= GROUND_Y - CAT_HEIGHT) {
+      newY = GROUND_Y - CAT_HEIGHT;
+      newVelY = 0;
+      isJumping = false;
+    }
+    cat.position.y = newY;
+    cat.velocity.y = newVelY;
+    cat.isJumping = isJumping;
+    cat.sprite = isJumping ? "bcat_jump" : cat.isSliding ? "bcat_sliding" : "bcat";
+
+    // Update game state
+    const newScore = gameState.score + 1;
+    const newStage = Math.floor(newScore / 1000) + 1;
+    let newSpeed = gameState.speed;
+    if (newStage > gameState.stage) {
+      if (newStage <= 10) newSpeed = 2 + (newStage - 1) * 0.2;
+      else if (newStage <= 20) newSpeed = 4 + (newStage - 10) * 0.3;
+      else newSpeed = 7 + (newStage - 20) * 0.5;
+    }
+    gameState.score = newScore;
+    gameState.stage = newStage;
+    gameState.speed = newSpeed;
+
+    // Update obstacles
+    obstaclesRef.current = obstacles
+      .map((o) => ({
+        ...o,
+        position: { ...o.position, x: o.position.x - gameState.speed },
+      }))
+      .filter((o) => o.position.x > -o.size.width);
+
+    // Spawn new obstacles
+    const spawnChance = Math.min(0.008 + (gameState.stage - 1) * 0.002, 0.025);
+    if (Math.random() < spawnChance) {
+      spawnObstacle();
+    }
+
+    // --- Collision Detection ---
+    for (const obstacle of obstaclesRef.current) {
+      if (checkCollision(cat, obstacle)) {
+        setGamePhase(GamePhase.GAME_OVER);
+        setGameState((prev) => ({ ...prev, isPlaying: false, isGameOver: true }));
+        onGameOver?.(gameState.score);
+        return; // Stop the loop
+      }
+    }
+
+    // --- Sync State for Rendering ---
+    setCat({ ...catRef.current });
+    setObstacles([...obstaclesRef.current]);
+    setGameState({ ...gameStateRef.current });
+
+    // --- Stage Completion ---
+    if (gameState.score > 0 && gameState.score % 10000 === 0) {
+      onStageComplete?.(gameState.stage);
+    }
+
+    // --- Next Frame ---
+    animationFrameId.current = requestAnimationFrame(gameLoop);
+  }, [onGameOver, onStageComplete, spawnObstacle]);
+
+  // --- Game Loop Controller ---
   useEffect(() => {
-    if (gamePhase !== GamePhase.PLAYING) return;
-
-    const gameLoop = setInterval(() => {
-      // Update cat physics
-      setCat((prev) => {
-        let newY = prev.position.y + prev.velocity.y;
-        let newVelY = prev.velocity.y + GRAVITY;
-        let isJumping = prev.isJumping;
-
-        if (newY >= GROUND_Y - CAT_HEIGHT) {
-          newY = GROUND_Y - CAT_HEIGHT;
-          newVelY = 0;
-          isJumping = false;
-        }
-
-        return {
-          ...prev,
-          position: { ...prev.position, y: newY },
-          velocity: { ...prev.velocity, y: newVelY },
-          isJumping,
-          sprite: isJumping
-            ? "bcat_jump"
-            : prev.isSliding
-            ? "bcat_sliding"
-            : "bcat",
-        };
-      });
-
-      // Update game state and stage progression
-      setGameState((prev) => {
-        const newScore = prev.score + 1;
-        const newStage = Math.floor(newScore / 1000) + 1;
-        let newSpeed = prev.speed;
-
-        // Increase speed based on stage
-        if (newStage > prev.stage) {
-          if (newStage <= 10) {
-            newSpeed = 2 + (newStage - 1) * 0.2; // Gradual increase for stages 1-10
-          } else if (newStage <= 20) {
-            newSpeed = 4 + (newStage - 10) * 0.3; // Faster increase for stages 11-20
-          } else {
-            newSpeed = 7 + (newStage - 20) * 0.5; // Even faster for 21+
-          }
-        }
-
-        return {
-          ...prev,
-          score: newScore,
-          stage: newStage,
-          speed: newSpeed,
-        };
-      });
-
-      // Update obstacles
-      setObstacles((prev) =>
-        prev
-          .map((obstacle) => ({
-            ...obstacle,
-            position: {
-              ...obstacle.position,
-              x: obstacle.position.x - gameState.speed,
-            },
-          }))
-          .filter((obstacle) => obstacle.position.x > -obstacle.size.width)
-      );
-
-      // Spawn new obstacles (frequency increases with stage)
-      const spawnChance = Math.min(
-        0.008 + (gameState.stage - 1) * 0.002,
-        0.025
-      );
-      if (Math.random() < spawnChance) {
-        spawnObstacle();
+    if (gamePhase === GamePhase.PLAYING) {
+      animationFrameId.current = requestAnimationFrame(gameLoop);
+    }
+    return () => {
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
       }
+    };
+  }, [gamePhase, gameLoop]);
 
-      // Check collisions
-      obstacles.forEach((obstacle) => {
-        if (checkCollision(cat, obstacle)) {
-          setGamePhase(GamePhase.GAME_OVER);
-          setGameState((prev) => ({
-            ...prev,
-            isPlaying: false,
-            isGameOver: true,
-          }));
-          onGameOver?.(gameState.score);
+  const startGame = () => {
+    resetGame(false); // Reset logic without changing phase
+    setGamePhase(GamePhase.PLAYING);
+  };
+
+  const jump = () => {
+    setCat((prev) => {
+      if (prev.isJumping || prev.isSliding) return prev;
+      return {
+        ...prev,
+        velocity: { ...prev.velocity, y: JUMP_FORCE },
+        isJumping: true,
+        sprite: "bcat_jump",
+      };
+    });
+  };
+
+  const slide = () => {
+    const svgToRender = (v: number) => v * (CAT_WIDTH / 320);
+    setCat((prev) => {
+      if (prev.isJumping || prev.isSliding) return prev;
+      return {
+        ...prev,
+        isSliding: true,
+        sprite: "bcat_sliding",
+        collisionBox: {
+          offset: { x: 8, y: 8 },
+          size: { width: svgToRender(28), height: svgToRender(20) },
+        },
+      };
+    });
+
+    setTimeout(() => {
+      setCat((prev) => ({
+        ...prev,
+        isSliding: false,
+        sprite: "bcat",
+        collisionBox: {
+          offset: { x: 8, y: 8 },
+          size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+        },
+      }));
+    }, 500);
+  };
+
+  const resetGame = (shouldSetPhase = true) => {
+    if (shouldSetPhase) {
+      setGamePhase(GamePhase.START);
+    }
+    const initialGameState: GameState = {
+      score: 0,
+      stage: 1,
+      isPlaying: false,
+      isGameOver: false,
+      speed: 2,
+    };
+    const initialCatState: Cat = {
+      position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
+      velocity: { x: 0, y: 0 },
+      size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+      collisionBox: {
+        offset: { x: 8, y: 8 },
+        size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+      },
+      isJumping: false,
+      isSliding: false,
+      sprite: "bcat",
+    };
+
+    setGameState(initialGameState);
+    setCat(initialCatState);
+    setObstacles([]);
+
+    // Also reset refs
+    gameStateRef.current = initialGameState;
+    catRef.current = initialCatState;
+    obstaclesRef.current = [];
+  };
+
+  // Handle keyboard input
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (gamePhase === GamePhase.START && (e.code === "Space" || e.code === "ArrowUp") && imagesLoaded) {
+        startGame();
+      } else if (gamePhase === GamePhase.PLAYING) {
+        if ((e.code === "Space" || e.code === "ArrowUp")) {
+          jump();
+        } else if (e.code === "ArrowDown") {
+          slide();
         }
-      });
-
-      // Check for stage completion (every 10 stages, show achievement)
-      if (gameState.score > 0 && gameState.score % 10000 === 0) {
-        onStageComplete?.(gameState.stage);
+      } else if (gamePhase === GamePhase.GAME_OVER && (e.code === "Space" || e.code === "ArrowUp")) {
+        resetGame();
       }
-    }, 1000 / 60); // 60 FPS
+    };
 
-    return () => clearInterval(gameLoop);
-  }, [gamePhase, cat, obstacles, gameState]);
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [gamePhase, imagesLoaded]);
+
 
   // Render game
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Clear canvas
     ctx.clearRect(0, 0, canvasWidth, CANVAS_HEIGHT);
 
     if (gamePhase === GamePhase.START) {
-      // Start screen
       ctx.fillStyle = "#333333";
       ctx.font = "32px Arial";
       ctx.textAlign = "center";
       ctx.fillText("Cat Runner", canvasWidth / 2, CANVAS_HEIGHT / 2 - 50);
       ctx.font = "16px Arial";
-
       if (!imagesLoaded) {
-        ctx.fillText(
-          "Loading cat sprites...",
-          canvasWidth / 2,
-          CANVAS_HEIGHT / 2
-        );
-        ctx.font = "12px Arial";
-        ctx.fillText(
-          `Images loaded: ${Object.keys(images).length}/3`,
-          canvasWidth / 2,
-          CANVAS_HEIGHT / 2 + 20
-        );
+        ctx.fillText("Loading cat sprites...", canvasWidth / 2, CANVAS_HEIGHT / 2);
       } else {
-        ctx.fillText(
-          "Press SPACE to start",
-          canvasWidth / 2,
-          CANVAS_HEIGHT / 2
-        );
-        ctx.fillText(
-          "SPACE: Jump, ↓: Slide",
-          canvasWidth / 2,
-          CANVAS_HEIGHT / 2 + 30
-        );
+        ctx.fillText("Press SPACE to start", canvasWidth / 2, CANVAS_HEIGHT / 2);
+        ctx.fillText("SPACE: Jump, ↓: Slide", canvasWidth / 2, CANVAS_HEIGHT / 2 + 30);
       }
-    } else if (gamePhase === GamePhase.PLAYING) {
+    } else if (gamePhase === GamePhase.PLAYING || gamePhase === GamePhase.GAME_OVER) {
       // Draw ground
       ctx.fillStyle = "#999999";
       ctx.fillRect(0, GROUND_Y, canvasWidth, 2);
@@ -420,58 +391,17 @@ export default function GameCanvas({
       ctx.fillStyle = "#333333";
       ctx.font = "16px monospace";
       ctx.textAlign = "left";
-      ctx.fillText(
-        `Score: ${gameState.score.toString().padStart(5, "0")}`,
-        20,
-        30
-      );
+      ctx.fillText(`Score: ${gameState.score.toString().padStart(5, "0")}`, 20, 30);
       ctx.fillText(`Stage: ${gameState.stage}`, 20, 50);
       ctx.fillText(`Speed: ${gameState.speed.toFixed(1)}x`, 20, 70);
-
-      // Stage progress bar (shows progress to next stage)
-      const stageProgress = (gameState.score % 1000) / 1000;
-      ctx.fillStyle = "#E5E5E5";
-      ctx.fillRect(canvasWidth - 220, 20, 200, 10);
-      ctx.fillStyle = "#4CAF50";
-      ctx.fillRect(canvasWidth - 220, 20, 200 * stageProgress, 10);
-      ctx.fillStyle = "#333333";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "right";
-      ctx.fillText(
-        `Next Stage: ${Math.floor(stageProgress * 100)}%`,
-        canvasWidth - 20,
-        45
-      );
 
       // Draw cat
       const catImage = images[cat.sprite];
       if (catImage && catImage.complete && catImage.naturalWidth > 0) {
-        ctx.drawImage(
-          catImage,
-          cat.position.x,
-          cat.position.y,
-          cat.size.width,
-          cat.size.height
-        );
+        ctx.drawImage(catImage, cat.position.x, cat.position.y, cat.size.width, cat.size.height);
       } else {
-        // Fallback rectangle if image not loaded
         ctx.fillStyle = "#FF6B35";
-        ctx.fillRect(
-          cat.position.x,
-          cat.position.y,
-          cat.size.width,
-          cat.size.height
-        );
-
-        // Draw a simple cat face on the rectangle
-        ctx.fillStyle = "#FFFFFF";
-        // Eyes
-        ctx.fillRect(cat.position.x + 8, cat.position.y + 10, 4, 4);
-        ctx.fillRect(cat.position.x + 18, cat.position.y + 10, 4, 4);
-        // Nose
-        ctx.fillRect(cat.position.x + 14, cat.position.y + 18, 2, 2);
-        // Mouth
-        ctx.fillRect(cat.position.x + 12, cat.position.y + 22, 6, 2);
+        ctx.fillRect(cat.position.x, cat.position.y, cat.size.width, cat.size.height);
       }
 
       // Debug: Draw collision box
@@ -486,43 +416,28 @@ export default function GameCanvas({
         );
       }
 
-      // Draw obstacles with different colors based on type
+      // Draw obstacles
       obstacles.forEach((obstacle) => {
-        if (obstacle.type === "cactus") {
-          ctx.fillStyle = "#2E7D32"; // Green for cactus
-        } else if (obstacle.type === "rock") {
-          ctx.fillStyle = "#5D4037"; // Brown for rock
-        } else if (obstacle.type === "bird") {
-          ctx.fillStyle = "#1976D2"; // Blue for bird
-        }
-
-        ctx.fillRect(
-          obstacle.position.x,
-          obstacle.position.y,
-          obstacle.size.width,
-          obstacle.size.height
-        );
+        if (obstacle.type === "cactus") ctx.fillStyle = "#2E7D32";
+        else if (obstacle.type === "rock") ctx.fillStyle = "#5D4037";
+        else if (obstacle.type === "bird") ctx.fillStyle = "#1976D2";
+        ctx.fillRect(obstacle.position.x, obstacle.position.y, obstacle.size.width, obstacle.size.height);
       });
-    } else if (gamePhase === GamePhase.GAME_OVER) {
-      // Game over screen
-      ctx.fillStyle = "#333333";
-      ctx.font = "32px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText("GAME OVER", canvasWidth / 2, CANVAS_HEIGHT / 2 - 50);
-      ctx.font = "18px Arial";
-      ctx.fillText(
-        `Final Score: ${gameState.score.toString().padStart(5, "0")}`,
-        canvasWidth / 2,
-        CANVAS_HEIGHT / 2
-      );
-      ctx.font = "16px Arial";
-      ctx.fillText(
-        "Press SPACE to restart",
-        canvasWidth / 2,
-        CANVAS_HEIGHT / 2 + 40
-      );
+
+      if (gamePhase === GamePhase.GAME_OVER) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillRect(0, 0, canvasWidth, CANVAS_HEIGHT);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "32px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvasWidth / 2, CANVAS_HEIGHT / 2 - 50);
+        ctx.font = "18px Arial";
+        ctx.fillText(`Final Score: ${gameState.score.toString().padStart(5, "0")}`, canvasWidth / 2, CANVAS_HEIGHT / 2);
+        ctx.font = "16px Arial";
+        ctx.fillText("Press SPACE to restart", canvasWidth / 2, CANVAS_HEIGHT / 2 + 40);
+      }
     }
-  }, [gamePhase, cat, obstacles, gameState, images, imagesLoaded]);
+  }, [gamePhase, cat, obstacles, gameState, images, imagesLoaded, canvasWidth]);
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
