@@ -106,8 +106,8 @@ export default function GameCanvas({
 
     const imageList = [
       { name: "bcat", src: "/bcat.svg" },
-      { name: "bcat_jump", src: "/bcatt_jump.png" },
-      { name: "bcat_sliding", src: "/bcatt_slide.png" },
+      { name: "bcat_jump", src: "/bcat_jump.svg" },
+      { name: "bcat_sliding", src: "/bcat_slide.svg" },
     ];
 
     // Load images sequentially to avoid overwhelming the browser
