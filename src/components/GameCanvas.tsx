@@ -12,7 +12,7 @@ const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 400;
 const GROUND_Y = 320;
 const CAT_WIDTH = 44;
-const CAT_HEIGHT = 44;
+const CAT_HEIGHT = 24;
 const GRAVITY = 0.8;
 const JUMP_FORCE = -15;
 const DEBUG_COLLISION = false; // Set to true to see collision boxes
@@ -90,8 +90,8 @@ export default function GameCanvas({
 
     const imageList = [
       { name: "bcat", src: "/bcat.svg" },
-      { name: "bcat_jump", src: "/bcat_jump.svg" },
-      { name: "bcat_sliding", src: "/bcat_sliding.png" },
+      { name: "bcat_jump", src: "/bcatt_jump.png" },
+      { name: "bcat_sliding", src: "/bcatt_slide.png" },
     ];
 
     // Load images sequentially to avoid overwhelming the browser
