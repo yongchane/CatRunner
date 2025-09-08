@@ -7,6 +7,7 @@ import {
   type Cat,
   type Obstacle,
 } from "@/types/game";
+import RandomBox from "./RandomBox";
 
 const CANVAS_HEIGHT = 400;
 const GROUND_Y = 300;
@@ -32,6 +33,9 @@ export default function GameCanvas({
   const [gamePhase, setGamePhase] = useState<GamePhase>(GamePhase.START);
   const [images, setImages] = useState<{ [key: string]: HTMLImageElement }>({});
   const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [showRandomBox, setShowRandomBox] = useState(false);
+  const [isRandomBoxPhase, setIsRandomBoxPhase] = useState(false);
+  const [lastRandomBoxStage, setLastRandomBoxStage] = useState(0);
 
   // bcat 초기 렌더링용 state
   const [cat, setCat] = useState<Cat>({
@@ -198,6 +202,12 @@ export default function GameCanvas({
     const obstacles = obstaclesRef.current;
     const gameState = gameStateRef.current;
 
+    // 랜덤박스 단계에서는 게임 루프를 중단
+    if (isRandomBoxPhase) {
+      animationFrameId.current = requestAnimationFrame(gameLoop);
+      return;
+    }
+
     // 고양이의 점프/중력/착지 처리
     // velocity.y에 중력 적용
     // position.y에 velocity.y 적용
@@ -226,13 +236,21 @@ export default function GameCanvas({
     // 1~10스테이지: 2 + 0.2씩 증가
     // 11~20스테이지: 4 + 0.3씩 증가
     // 21스테이지 이상: 7 + 0.5씩 증가
+    // 수정 필요
     const newScore = gameState.score + 1;
-    const newStage = Math.floor(newScore / 1000) + 1;
+    const newStage = Math.floor(newScore / 100) + 1;
     let newSpeed = gameState.speed;
     if (newStage > gameState.stage) {
       if (newStage <= 10) newSpeed = 2 + (newStage - 1) * 0.2;
       else if (newStage <= 20) newSpeed = 4 + (newStage - 10) * 0.3;
       else newSpeed = 7 + (newStage - 20) * 0.5;
+
+      // 10 스테이지마다 랜덤박스 표시 (10, 20, 30, ...)
+      if (newStage % 10 === 0 && newStage > lastRandomBoxStage) {
+        setIsRandomBoxPhase(true);
+        setShowRandomBox(true);
+        setLastRandomBoxStage(newStage);
+      }
     }
     gameState.score = newScore;
     gameState.stage = newStage;
@@ -283,7 +301,7 @@ export default function GameCanvas({
 
     // 다음 프레임 요청 (gameLoop 재호출)
     animationFrameId.current = requestAnimationFrame(gameLoop);
-  }, [onGameOver, onStageComplete, spawnObstacle]);
+  }, [onGameOver, onStageComplete, spawnObstacle, isRandomBoxPhase, lastRandomBoxStage]);
 
   // 게임 루프의 시작과 정지 관리
   useEffect(() => {
@@ -357,6 +375,11 @@ export default function GameCanvas({
       },
     }));
   };
+
+  const handleRandomBoxComplete = () => {
+    setShowRandomBox(false);
+    setIsRandomBoxPhase(false);
+  };
   // 게임 상태 및 고양이, 장애물 상태 초기화
   // gamePhase가 true면 게임 시작 상태로 변경
   // gamePhase가 false면 상태만 초기화
@@ -387,6 +410,9 @@ export default function GameCanvas({
     setGameState(initialGameState);
     setCat(initialCatState);
     setObstacles([]);
+    setShowRandomBox(false);
+    setIsRandomBoxPhase(false);
+    setLastRandomBoxStage(0);
 
     // Also reset refs
     gameStateRef.current = initialGameState;
@@ -581,6 +607,13 @@ export default function GameCanvas({
       <div className="text-sm text-gray-600 text-center">
         <p>SPACE: Jump | ↓: Slide</p>
       </div>
+      
+      <RandomBox
+        isVisible={showRandomBox}
+        onComplete={handleRandomBoxComplete}
+        canvasWidth={canvasWidth}
+        canvasHeight={CANVAS_HEIGHT}
+      />
     </div>
   );
 }
