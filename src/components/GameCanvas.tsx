@@ -12,7 +12,7 @@ const CANVAS_HEIGHT = 400;
 const GROUND_Y = 300;
 const CAT_WIDTH = 100;
 const CAT_HEIGHT = 100;
-const GRAVITY = 0.8;
+const GRAVITY = 0.5;
 const JUMP_FORCE = -15;
 const DEBUG_COLLISION = false; // Set to true to see collision boxes
 
@@ -33,7 +33,7 @@ export default function GameCanvas({
   const [images, setImages] = useState<{ [key: string]: HTMLImageElement }>({});
   const [imagesLoaded, setImagesLoaded] = useState(false);
 
-  // Use state for rendering
+  // bcat 초기 렌더링용 state
   const [cat, setCat] = useState<Cat>({
     position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
     velocity: { x: 0, y: 0 },
@@ -47,7 +47,9 @@ export default function GameCanvas({
     sprite: "bcat",
   });
 
+  // 장애물 생성/이동/삭제 관리
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
+  // 게임 전체 상태 관리(점수, 스테이지, 게임오버 등)
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
     stage: 1,
@@ -56,12 +58,12 @@ export default function GameCanvas({
     speed: 2,
   });
 
-  // Use refs for game loop logic to get synchronous updates
+  // 고양이,장애물,게임 상태 동기화용 ref
   const catRef = useRef(cat);
   const obstaclesRef = useRef(obstacles);
   const gameStateRef = useRef(gameState);
 
-  // Sync refs whenever state changes
+  // 고양이,장애물,게임 상태 동기화용 ref
   useEffect(() => {
     catRef.current = cat;
   }, [cat]);
@@ -72,7 +74,7 @@ export default function GameCanvas({
     gameStateRef.current = gameState;
   }, [gameState]);
 
-  // Load images
+  // 이미지 연결 및 로드
   useEffect(() => {
     const loadImage = (
       name: string,
@@ -98,7 +100,7 @@ export default function GameCanvas({
         img.src = src;
       });
     };
-
+    // bcat, bcat_jump, bcat_sliding의 이미지 로드
     const imageList = [
       { name: "bcat", src: "/bcat.svg" },
       { name: "bcat_jump", src: "/bcat_jump.svg" },
@@ -107,7 +109,9 @@ export default function GameCanvas({
 
     const loadAllImages = async () => {
       try {
-        await Promise.all(imageList.map(({ name, src }) => loadImage(name, src)));
+        await Promise.all(
+          imageList.map(({ name, src }) => loadImage(name, src))
+        );
         console.log("🎉 All cat images loaded successfully");
         setImagesLoaded(true);
       } catch (error) {
@@ -118,7 +122,7 @@ export default function GameCanvas({
     loadAllImages();
   }, []);
 
-  // Handle resize
+  // 브라우저 창 크기 변경 대응
   useEffect(() => {
     const handleResize = () => {
       setCanvasWidth(window.innerWidth);
@@ -133,6 +137,7 @@ export default function GameCanvas({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // 고양이와 장애물 충돌 감지
   const checkCollision = (cat: Cat, obstacle: Obstacle): boolean => {
     const catCollisionX = cat.position.x + cat.collisionBox.offset.x;
     const catCollisionY = cat.position.y + cat.collisionBox.offset.y;
@@ -146,8 +151,9 @@ export default function GameCanvas({
       catCollisionY + catCollisionHeight > obstacle.position.y
     );
   };
-
+  // 게임 화면 오른쪽 끝에 랜덤 장애물 생성
   const spawnObstacle = useCallback(() => {
+    const MIN_OBSTACLE_GAP = 150; // 장애물 간 최소 간격(px)
     const obstacleTypes = ["cactus", "rock", "bird"] as const;
     const randomType =
       obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
@@ -174,6 +180,15 @@ export default function GameCanvas({
         type: "cactus",
       };
     }
+    // 마지막 장애물과의 간격 체크
+    const lastObstacle = obstaclesRef.current[obstaclesRef.current.length - 1];
+    if (
+      lastObstacle &&
+      lastObstacle.position.x > currentCanvasWidth - MIN_OBSTACLE_GAP
+    ) {
+      // 간격이 충분하지 않으면 생성하지 않음
+      return;
+    }
     obstaclesRef.current = [...obstaclesRef.current, newObstacle];
   }, []);
 
@@ -183,7 +198,10 @@ export default function GameCanvas({
     const obstacles = obstaclesRef.current;
     const gameState = gameStateRef.current;
 
-    // Update cat physics
+    // 고양이의 점프/중력/착지 처리
+    // velocity.y에 중력 적용
+    // position.y에 velocity.y 적용
+    // 땅에 닿으면 점프 상태 해제 및 위치/속도 조정
     let newY = cat.position.y + cat.velocity.y;
     let newVelY = cat.velocity.y + GRAVITY;
     let isJumping = cat.isJumping;
@@ -196,9 +214,18 @@ export default function GameCanvas({
     cat.position.y = newY;
     cat.velocity.y = newVelY;
     cat.isJumping = isJumping;
-    cat.sprite = isJumping ? "bcat_jump" : cat.isSliding ? "bcat_sliding" : "bcat";
+    cat.sprite = isJumping
+      ? "bcat_jump"
+      : cat.isSliding
+      ? "bcat_sliding"
+      : "bcat";
 
-    // Update game state
+    // 게임의 점수,스테이지,속도 처리
+    // 일정 점수마다 스테이지 증가 및 속도 증가
+    // 속도는 스테이지에 따라 점진적으로 증가
+    // 1~10스테이지: 2 + 0.2씩 증가
+    // 11~20스테이지: 4 + 0.3씩 증가
+    // 21스테이지 이상: 7 + 0.5씩 증가
     const newScore = gameState.score + 1;
     const newStage = Math.floor(newScore / 1000) + 1;
     let newSpeed = gameState.speed;
@@ -211,7 +238,9 @@ export default function GameCanvas({
     gameState.stage = newStage;
     gameState.speed = newSpeed;
 
-    // Update obstacles
+    // 장애물 위치 업데이트 및 화면 밖 장애물 제거
+    // 장애물 위치는 게임 속도에 따라 좌측으로 이동
+    // 화면 밖으로 나간 장애물은 배열에서 제거
     obstaclesRef.current = obstacles
       .map((o) => ({
         ...o,
@@ -219,17 +248,23 @@ export default function GameCanvas({
       }))
       .filter((o) => o.position.x > -o.size.width);
 
-    // Spawn new obstacles
+    // 장애물 등장확률 처리
+    // 스테이지가 올라갈수록 등장확률 증가 (최대 2.5%)
     const spawnChance = Math.min(0.008 + (gameState.stage - 1) * 0.002, 0.025);
     if (Math.random() < spawnChance) {
       spawnObstacle();
     }
 
-    // --- Collision Detection ---
+    // 고양이와 장애물의 충돌을 감지
+    // 충돌 시 게임오버 처리
     for (const obstacle of obstaclesRef.current) {
       if (checkCollision(cat, obstacle)) {
         setGamePhase(GamePhase.GAME_OVER);
-        setGameState((prev) => ({ ...prev, isPlaying: false, isGameOver: true }));
+        setGameState((prev) => ({
+          ...prev,
+          isPlaying: false,
+          isGameOver: true,
+        }));
         onGameOver?.(gameState.score);
         return; // Stop the loop
       }
@@ -240,16 +275,17 @@ export default function GameCanvas({
     setObstacles([...obstaclesRef.current]);
     setGameState({ ...gameStateRef.current });
 
-    // --- Stage Completion ---
+    // 스테이지 완료 감지 및 콜백 호출
+    // 10000점마다 스테이지 완료로 간주
     if (gameState.score > 0 && gameState.score % 10000 === 0) {
       onStageComplete?.(gameState.stage);
     }
 
-    // --- Next Frame ---
+    // 다음 프레임 요청 (gameLoop 재호출)
     animationFrameId.current = requestAnimationFrame(gameLoop);
   }, [onGameOver, onStageComplete, spawnObstacle]);
 
-  // --- Game Loop Controller ---
+  // 게임 루프의 시작과 정지 관리
   useEffect(() => {
     if (gamePhase === GamePhase.PLAYING) {
       animationFrameId.current = requestAnimationFrame(gameLoop);
@@ -266,6 +302,10 @@ export default function GameCanvas({
     setGamePhase(GamePhase.PLAYING);
   };
 
+  // 점프 및 슬라이딩 처리
+  // 점프 중에는 슬라이딩 불가, 슬라이딩 중에는 점프 불가
+  // 점프 시 velocity.y에 음수값 부여
+  // 슬라이딩 시 충돌박스 크기 축소 후 일정시간 후 원복
   const jump = () => {
     setCat((prev) => {
       if (prev.isJumping || prev.isSliding) return prev;
@@ -278,12 +318,25 @@ export default function GameCanvas({
     });
   };
 
-  const slide = () => {
-    const svgToRender = (v: number) => v * (CAT_WIDTH / 320);
+  const SLIDE_DURATION = 500; // 슬라이딩 지속 시간(ms)
+  const svgToRender = (v: number) => v * (CAT_WIDTH / 320);
+  const startSlide = () => {
     setCat((prev) => {
-      if (prev.isJumping || prev.isSliding) return prev;
+      if (prev.isSliding) return prev;
+      // 점프 중에 ArrowDown을 누르면 즉시 바닥에 붙게 처리
+      let newY = prev.position.y;
+      let newVelY = prev.velocity.y;
+      let newIsJumping = prev.isJumping;
+      if (prev.position.y < GROUND_Y - CAT_HEIGHT) {
+        newY = GROUND_Y - CAT_HEIGHT;
+        newVelY = 0;
+        newIsJumping = false;
+      }
       return {
         ...prev,
+        position: { ...prev.position, y: newY },
+        velocity: { ...prev.velocity, y: newVelY },
+        isJumping: newIsJumping,
         isSliding: true,
         sprite: "bcat_sliding",
         collisionBox: {
@@ -292,20 +345,21 @@ export default function GameCanvas({
         },
       };
     });
-
-    setTimeout(() => {
-      setCat((prev) => ({
-        ...prev,
-        isSliding: false,
-        sprite: "bcat",
-        collisionBox: {
-          offset: { x: 8, y: 8 },
-          size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-        },
-      }));
-    }, 500);
   };
-
+  const endSlide = () => {
+    setCat((prev) => ({
+      ...prev,
+      isSliding: false,
+      sprite: "bcat",
+      collisionBox: {
+        offset: { x: 8, y: 8 },
+        size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+      },
+    }));
+  };
+  // 게임 상태 및 고양이, 장애물 상태 초기화
+  // gamePhase가 true면 게임 시작 상태로 변경
+  // gamePhase가 false면 상태만 초기화
   const resetGame = (shouldSetPhase = true) => {
     if (shouldSetPhase) {
       setGamePhase(GamePhase.START);
@@ -340,28 +394,61 @@ export default function GameCanvas({
     obstaclesRef.current = [];
   };
 
-  // Handle keyboard input
+  // 키보드 입력 처리
+  // START 상태에서 SPACE 또는 ↑키로 게임 시작
+  // PLAYING 상태에서 SPACE 또는 ↑키로 점프, ↓키로 슬라이딩
+  // GAME_OVER 상태에서 SPACE 또는 ↑키로 게임 재시작
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (gamePhase === GamePhase.START && (e.code === "Space" || e.code === "ArrowUp") && imagesLoaded) {
+    let slideTimeout: NodeJS.Timeout | null = null;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        gamePhase === GamePhase.START &&
+        (e.code === "Space" || e.code === "ArrowUp") &&
+        imagesLoaded
+      ) {
         startGame();
       } else if (gamePhase === GamePhase.PLAYING) {
-        if ((e.code === "Space" || e.code === "ArrowUp")) {
+        if (e.code === "Space" || e.code === "ArrowUp") {
           jump();
         } else if (e.code === "ArrowDown") {
-          slide();
+          startSlide();
+          // SLIDE_DURATION 이후 자동 해제 (키를 계속 누르고 있으면 해제 안됨)
+          if (slideTimeout) clearTimeout(slideTimeout);
+          slideTimeout = setTimeout(() => {
+            endSlide();
+          }, SLIDE_DURATION);
         }
-      } else if (gamePhase === GamePhase.GAME_OVER && (e.code === "Space" || e.code === "ArrowUp")) {
+      } else if (
+        gamePhase === GamePhase.GAME_OVER &&
+        (e.code === "Space" || e.code === "ArrowUp")
+      ) {
         resetGame();
       }
     };
 
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (gamePhase === GamePhase.PLAYING && e.code === "ArrowDown") {
+        endSlide();
+        if (slideTimeout) {
+          clearTimeout(slideTimeout);
+          slideTimeout = null;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      if (slideTimeout) clearTimeout(slideTimeout);
+    };
   }, [gamePhase, imagesLoaded]);
 
-
-  // Render game
+  // 게임 화면 렌더링
+  // gamePhase에 따라 시작화면,게임화면,게임오버화면 렌더링
+  // 게임화면에서는 고양이,장애물,점수,스테이지 정보 렌더링
+  // DEBUG_COLLISION이 true면 충돌박스도 렌더링
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -377,12 +464,27 @@ export default function GameCanvas({
       ctx.fillText("Cat Runner", canvasWidth / 2, CANVAS_HEIGHT / 2 - 50);
       ctx.font = "16px Arial";
       if (!imagesLoaded) {
-        ctx.fillText("Loading cat sprites...", canvasWidth / 2, CANVAS_HEIGHT / 2);
+        ctx.fillText(
+          "Loading cat sprites...",
+          canvasWidth / 2,
+          CANVAS_HEIGHT / 2
+        );
       } else {
-        ctx.fillText("Press SPACE to start", canvasWidth / 2, CANVAS_HEIGHT / 2);
-        ctx.fillText("SPACE: Jump, ↓: Slide", canvasWidth / 2, CANVAS_HEIGHT / 2 + 30);
+        ctx.fillText(
+          "Press SPACE to start",
+          canvasWidth / 2,
+          CANVAS_HEIGHT / 2
+        );
+        ctx.fillText(
+          "SPACE: Jump, ↓: Slide",
+          canvasWidth / 2,
+          CANVAS_HEIGHT / 2 + 30
+        );
       }
-    } else if (gamePhase === GamePhase.PLAYING || gamePhase === GamePhase.GAME_OVER) {
+    } else if (
+      gamePhase === GamePhase.PLAYING ||
+      gamePhase === GamePhase.GAME_OVER
+    ) {
       // Draw ground
       ctx.fillStyle = "#999999";
       ctx.fillRect(0, GROUND_Y, canvasWidth, 2);
@@ -391,17 +493,32 @@ export default function GameCanvas({
       ctx.fillStyle = "#333333";
       ctx.font = "16px monospace";
       ctx.textAlign = "left";
-      ctx.fillText(`Score: ${gameState.score.toString().padStart(5, "0")}`, 20, 30);
+      ctx.fillText(
+        `Score: ${gameState.score.toString().padStart(5, "0")}`,
+        20,
+        30
+      );
       ctx.fillText(`Stage: ${gameState.stage}`, 20, 50);
       ctx.fillText(`Speed: ${gameState.speed.toFixed(1)}x`, 20, 70);
 
       // Draw cat
       const catImage = images[cat.sprite];
       if (catImage && catImage.complete && catImage.naturalWidth > 0) {
-        ctx.drawImage(catImage, cat.position.x, cat.position.y, cat.size.width, cat.size.height);
+        ctx.drawImage(
+          catImage,
+          cat.position.x,
+          cat.position.y,
+          cat.size.width,
+          cat.size.height
+        );
       } else {
         ctx.fillStyle = "#FF6B35";
-        ctx.fillRect(cat.position.x, cat.position.y, cat.size.width, cat.size.height);
+        ctx.fillRect(
+          cat.position.x,
+          cat.position.y,
+          cat.size.width,
+          cat.size.height
+        );
       }
 
       // Debug: Draw collision box
@@ -421,7 +538,12 @@ export default function GameCanvas({
         if (obstacle.type === "cactus") ctx.fillStyle = "#2E7D32";
         else if (obstacle.type === "rock") ctx.fillStyle = "#5D4037";
         else if (obstacle.type === "bird") ctx.fillStyle = "#1976D2";
-        ctx.fillRect(obstacle.position.x, obstacle.position.y, obstacle.size.width, obstacle.size.height);
+        ctx.fillRect(
+          obstacle.position.x,
+          obstacle.position.y,
+          obstacle.size.width,
+          obstacle.size.height
+        );
       });
 
       if (gamePhase === GamePhase.GAME_OVER) {
@@ -432,9 +554,17 @@ export default function GameCanvas({
         ctx.textAlign = "center";
         ctx.fillText("GAME OVER", canvasWidth / 2, CANVAS_HEIGHT / 2 - 50);
         ctx.font = "18px Arial";
-        ctx.fillText(`Final Score: ${gameState.score.toString().padStart(5, "0")}`, canvasWidth / 2, CANVAS_HEIGHT / 2);
+        ctx.fillText(
+          `Final Score: ${gameState.score.toString().padStart(5, "0")}`,
+          canvasWidth / 2,
+          CANVAS_HEIGHT / 2
+        );
         ctx.font = "16px Arial";
-        ctx.fillText("Press SPACE to restart", canvasWidth / 2, CANVAS_HEIGHT / 2 + 40);
+        ctx.fillText(
+          "Press SPACE to restart",
+          canvasWidth / 2,
+          CANVAS_HEIGHT / 2 + 40
+        );
       }
     }
   }, [gamePhase, cat, obstacles, gameState, images, imagesLoaded, canvasWidth]);
