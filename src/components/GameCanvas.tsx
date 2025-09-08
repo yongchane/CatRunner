@@ -106,9 +106,9 @@ export default function GameCanvas({
     };
     // bcat, bcat_jump, bcat_sliding의 이미지 로드
     const imageList = [
-      { name: "bcat", src: "/bcat.svg" },
-      { name: "bcat_jump", src: "/bcat_jump.svg" },
-      { name: "bcat_sliding", src: "/bcat_slide.svg" },
+      { name: "bcat", src: "/babycat/bcat.svg" },
+      { name: "bcat_jump", src: "/babycat/bcat_jump.svg" },
+      { name: "bcat_sliding", src: "/babycat/bcat_slide.svg" },
     ];
 
     const loadAllImages = async () => {
@@ -236,9 +236,9 @@ export default function GameCanvas({
     // 1~10스테이지: 2 + 0.2씩 증가
     // 11~20스테이지: 4 + 0.3씩 증가
     // 21스테이지 이상: 7 + 0.5씩 증가
-    // 수정 필요
+    // 테스트를 위한 스코어 조정 추후 수정 필요
     const newScore = gameState.score + 1;
-    const newStage = Math.floor(newScore / 100) + 1;
+    const newStage = Math.floor(newScore / 10) + 1;
     let newSpeed = gameState.speed;
     if (newStage > gameState.stage) {
       if (newStage <= 10) newSpeed = 2 + (newStage - 1) * 0.2;
@@ -301,7 +301,13 @@ export default function GameCanvas({
 
     // 다음 프레임 요청 (gameLoop 재호출)
     animationFrameId.current = requestAnimationFrame(gameLoop);
-  }, [onGameOver, onStageComplete, spawnObstacle, isRandomBoxPhase, lastRandomBoxStage]);
+  }, [
+    onGameOver,
+    onStageComplete,
+    spawnObstacle,
+    isRandomBoxPhase,
+    lastRandomBoxStage,
+  ]);
 
   // 게임 루프의 시작과 정지 관리
   useEffect(() => {
@@ -607,7 +613,7 @@ export default function GameCanvas({
       <div className="text-sm text-gray-600 text-center">
         <p>SPACE: Jump | ↓: Slide</p>
       </div>
-      
+
       <RandomBox
         isVisible={showRandomBox}
         onComplete={handleRandomBoxComplete}

@@ -18,37 +18,41 @@ export default function RandomBox({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // 다양한 랜덤 이미지 목록
   const randomImages = [
-    "/bcat.svg",
-    "/bcat_jump.svg", 
-    "/bcat_slide.svg",
+    "/buff/trashMeet.png",
+    "/buff/bulkupmeet.png",
+    "/babycat/bcat.svg",
+    "/babycat/bcat_jump.svg",
+    "/babycat/bcat_slide.svg",
   ];
 
+  // 이미지 선택 및 애니메이션 효과
   useEffect(() => {
     if (isVisible && !isAnimating) {
       setIsAnimating(true);
-      
+
       let rotationCount = 0;
-      const maxRotations = 10;
-      
+      const maxRotations = 15;
+
       const rotateImages = () => {
         if (rotationCount < maxRotations) {
           const randomIndex = Math.floor(Math.random() * randomImages.length);
           setSelectedImage(randomImages[randomIndex]);
           rotationCount++;
-          setTimeout(rotateImages, 100);
+          setTimeout(rotateImages, 110);
         } else {
           const finalIndex = Math.floor(Math.random() * randomImages.length);
           setSelectedImage(randomImages[finalIndex]);
-          
+
           setTimeout(() => {
             setIsAnimating(false);
             setSelectedImage(null);
             onComplete();
-          }, 1000);
+          }, 3400);
         }
       };
-      
+
       rotateImages();
     }
   }, [isVisible, isAnimating, onComplete, randomImages]);
@@ -77,7 +81,7 @@ export default function RandomBox({
         <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">
           🎁 BONUS BOX! 🎁
         </h2>
-        
+
         {selectedImage && (
           <div
             className="border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center"
@@ -99,7 +103,7 @@ export default function RandomBox({
             />
           </div>
         )}
-        
+
         <p className="text-sm text-gray-600 mt-4 text-center">
           {isAnimating ? "선택 중..." : "보너스 획득!"}
         </p>
