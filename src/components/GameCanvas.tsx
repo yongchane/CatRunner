@@ -36,16 +36,54 @@ export default function GameCanvas({
   const [showRandomBox, setShowRandomBox] = useState(false);
   const [isRandomBoxPhase, setIsRandomBoxPhase] = useState(false);
   const [lastRandomBoxStage, setLastRandomBoxStage] = useState(0);
+  const [currentCharacter, setCurrentCharacter] = useState<string>("bcat");
+
+  // 캐릭터별 히트박스 설정
+  const getCharacterHitbox = (
+    character: string,
+    isSliding: boolean = false
+  ) => {
+    const baseHitbox = {
+      offset: { x: 8, y: 8 },
+      size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+    };
+
+    if (character === "bulkcat") {
+      return {
+        offset: { x: 5, y: 5 },
+        size: {
+          width: isSliding ? CAT_WIDTH + 10 : CAT_WIDTH + 20,
+          height: isSliding ? CAT_HEIGHT - 10 : CAT_HEIGHT + 15,
+        },
+      };
+    } else if (character === "cat") {
+      return {
+        offset: { x: 10, y: 10 },
+        size: {
+          width: isSliding ? CAT_WIDTH - 10 : CAT_WIDTH - 5,
+          height: isSliding ? CAT_HEIGHT - 15 : CAT_HEIGHT - 5,
+        },
+      };
+    }
+
+    // Default hitbox for bcat and sliding
+    if (isSliding) {
+      const svgToRender = (v: number) => v * (CAT_WIDTH / 320);
+      return {
+        offset: { x: 8, y: 8 },
+        size: { width: svgToRender(28), height: svgToRender(20) },
+      };
+    }
+
+    return baseHitbox;
+  };
 
   // bcat 초기 렌더링용 state
   const [cat, setCat] = useState<Cat>({
     position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
     velocity: { x: 0, y: 0 },
     size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-    collisionBox: {
-      offset: { x: 8, y: 8 },
-      size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-    },
+    collisionBox: getCharacterHitbox("bcat"),
     isJumping: false,
     isSliding: false,
     sprite: "bcat",
@@ -104,11 +142,17 @@ export default function GameCanvas({
         img.src = src;
       });
     };
-    // bcat, bcat_jump, bcat_sliding의 이미지 로드
+    // 모든 캐릭터 이미지 로드 cat,bulkcat 임의 파일로 작업 중 수정 필요
     const imageList = [
       { name: "bcat", src: "/babycat/bcat.svg" },
       { name: "bcat_jump", src: "/babycat/bcat_jump.svg" },
       { name: "bcat_sliding", src: "/babycat/bcat_slide.svg" },
+      { name: "cat", src: "/cat/cat.png" },
+      { name: "cat_jump", src: "/babycat/bcat_jump.svg" },
+      { name: "cat_sliding", src: "/babycat/bcat_slide.svg" },
+      { name: "bulkcat", src: "/bulkcat/bulkcat.png" },
+      { name: "bulkcat_jump", src: "/bulkcat/bulkcat.png" },
+      { name: "bulkcat_sliding", src: "/bulkcat/bulkcat.png" },
     ];
 
     const loadAllImages = async () => {
@@ -116,7 +160,7 @@ export default function GameCanvas({
         await Promise.all(
           imageList.map(({ name, src }) => loadImage(name, src))
         );
-        console.log("🎉 All cat images loaded successfully");
+        console.log("🎉 All character images loaded successfully");
         setImagesLoaded(true);
       } catch (error) {
         console.error("🚨 Some images failed to load:", error);
@@ -225,10 +269,10 @@ export default function GameCanvas({
     cat.velocity.y = newVelY;
     cat.isJumping = isJumping;
     cat.sprite = isJumping
-      ? "bcat_jump"
+      ? `${currentCharacter}_jump`
       : cat.isSliding
-      ? "bcat_sliding"
-      : "bcat";
+      ? `${currentCharacter}_sliding`
+      : currentCharacter;
 
     // 게임의 점수,스테이지,속도 처리
     // 일정 점수마다 스테이지 증가 및 속도 증가
@@ -337,13 +381,12 @@ export default function GameCanvas({
         ...prev,
         velocity: { ...prev.velocity, y: JUMP_FORCE },
         isJumping: true,
-        sprite: "bcat_jump",
+        sprite: `${currentCharacter}_jump`,
       };
     });
   };
 
   const SLIDE_DURATION = 500; // 슬라이딩 지속 시간(ms)
-  const svgToRender = (v: number) => v * (CAT_WIDTH / 320);
   const startSlide = () => {
     setCat((prev) => {
       if (prev.isSliding) return prev;
@@ -362,11 +405,8 @@ export default function GameCanvas({
         velocity: { ...prev.velocity, y: newVelY },
         isJumping: newIsJumping,
         isSliding: true,
-        sprite: "bcat_sliding",
-        collisionBox: {
-          offset: { x: 8, y: 8 },
-          size: { width: svgToRender(28), height: svgToRender(20) },
-        },
+        sprite: `${currentCharacter}_sliding`,
+        collisionBox: getCharacterHitbox(currentCharacter, true),
       };
     });
   };
@@ -374,17 +414,25 @@ export default function GameCanvas({
     setCat((prev) => ({
       ...prev,
       isSliding: false,
-      sprite: "bcat",
-      collisionBox: {
-        offset: { x: 8, y: 8 },
-        size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-      },
+      sprite: currentCharacter,
+      collisionBox: getCharacterHitbox(currentCharacter, false),
     }));
   };
 
-  const handleRandomBoxComplete = () => {
+  const handleRandomBoxComplete = (selectedCharacter?: string) => {
     setShowRandomBox(false);
     setIsRandomBoxPhase(false);
+
+    if (selectedCharacter) {
+      setCurrentCharacter(selectedCharacter);
+
+      // Update cat sprite and hitbox immediately
+      setCat((prev) => ({
+        ...prev,
+        sprite: selectedCharacter,
+        collisionBox: getCharacterHitbox(selectedCharacter, prev.isSliding),
+      }));
+    }
   };
   // 게임 상태 및 고양이, 장애물 상태 초기화
   // gamePhase가 true면 게임 시작 상태로 변경
@@ -404,13 +452,10 @@ export default function GameCanvas({
       position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
       velocity: { x: 0, y: 0 },
       size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-      collisionBox: {
-        offset: { x: 8, y: 8 },
-        size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-      },
+      collisionBox: getCharacterHitbox(currentCharacter, false),
       isJumping: false,
       isSliding: false,
-      sprite: "bcat",
+      sprite: currentCharacter,
     };
 
     setGameState(initialGameState);

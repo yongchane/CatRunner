@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 
 interface RandomBoxProps {
   isVisible: boolean;
-  onComplete: () => void;
+  onComplete: (selectedCharacter?: string) => void;
   canvasWidth: number;
   canvasHeight: number;
 }
@@ -22,6 +22,7 @@ export default function RandomBox({
   const randomImages = [
     "/buff/trashMeet.png",
     "/buff/bulkupmeet.png",
+    "/buff/churu.png",
     "/babycat/bcat.svg",
     "/babycat/bcat_jump.svg",
     "/babycat/bcat_slide.svg",
@@ -43,12 +44,22 @@ export default function RandomBox({
           setTimeout(rotateImages, 110);
         } else {
           const finalIndex = Math.floor(Math.random() * randomImages.length);
-          setSelectedImage(randomImages[finalIndex]);
+          const finalImage = randomImages[finalIndex];
+          setSelectedImage(finalImage);
 
           setTimeout(() => {
             setIsAnimating(false);
             setSelectedImage(null);
-            onComplete();
+            
+            // Determine character based on selected image
+            let selectedCharacter = "bcat"; // default
+            if (finalImage === "/buff/bulkupmeet.png") {
+              selectedCharacter = "bulkcat";
+            } else if (finalImage === "/buff/churu.png") {
+              selectedCharacter = "cat";
+            }
+            
+            onComplete(selectedCharacter);
           }, 3400);
         }
       };
