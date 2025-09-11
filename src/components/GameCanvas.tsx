@@ -150,7 +150,7 @@ export default function GameCanvas({
       { name: "cat", src: "/cat/cat.png" },
       { name: "cat_jump", src: "/babycat/bcat_jump.svg" },
       { name: "cat_sliding", src: "/babycat/bcat_slide.svg" },
-      { name: "bulkcat", src: "/bulkcat/bulkcat.png" },
+      { name: "bulkcat", src: "/bulkcat/bulkcat.svg" },
       { name: "bulkcat_jump", src: "/bulkcat/bulkcat.png" },
       { name: "bulkcat_sliding", src: "/bulkcat/bulkcat.png" },
     ];
