@@ -19,14 +19,8 @@ export default function RandomBox({
   const [isAnimating, setIsAnimating] = useState(false);
 
   // 다양한 랜덤 이미지 목록
-  const randomImages = [
-    "/buff/trashMeet.png",
-    "/buff/bulkupmeet.png",
-    "/buff/churu.png",
-    "/babycat/bcat.svg",
-    "/babycat/bcat_jump.svg",
-    "/babycat/bcat_slide.svg",
-  ];
+  // "/buff/trashMeet.png",    "/babycat/bcat.svg",
+  const randomImages = ["/buff/bulkupmeet.png", "/buff/churu.png"];
 
   // 이미지 선택 및 애니메이션 효과
   useEffect(() => {
@@ -50,7 +44,7 @@ export default function RandomBox({
           setTimeout(() => {
             setIsAnimating(false);
             setSelectedImage(null);
-            
+
             // Determine character based on selected image
             let selectedCharacter = "bcat"; // default
             if (finalImage === "/buff/bulkupmeet.png") {
@@ -58,7 +52,7 @@ export default function RandomBox({
             } else if (finalImage === "/buff/churu.png") {
               selectedCharacter = "cat";
             }
-            
+
             onComplete(selectedCharacter);
           }, 3400);
         }

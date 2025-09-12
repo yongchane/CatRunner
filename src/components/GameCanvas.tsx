@@ -37,6 +37,7 @@ export default function GameCanvas({
   const [isRandomBoxPhase, setIsRandomBoxPhase] = useState(false);
   const [lastRandomBoxStage, setLastRandomBoxStage] = useState(0);
   const [currentCharacter, setCurrentCharacter] = useState<string>("bcat");
+  const [bulkcatRunFrame, setBulkcatRunFrame] = useState(0);
 
   // 캐릭터별 히트박스 설정
   const getCharacterHitbox = (
@@ -150,7 +151,8 @@ export default function GameCanvas({
       { name: "cat", src: "/cat/cat.png" },
       { name: "cat_jump", src: "/babycat/bcat_jump.svg" },
       { name: "cat_sliding", src: "/babycat/bcat_slide.svg" },
-      { name: "bulkcat", src: "/bulkcat/bulkcat.svg" },
+      { name: "bulkcat1", src: "/bulkcat/bulkcat.svg" },
+      { name: "bulkcat2", src: "/bulkcat/bulkcat_run.svg" },
       { name: "bulkcat_jump", src: "/bulkcat/bulkcat.png" },
       { name: "bulkcat_sliding", src: "/bulkcat/bulkcat.png" },
     ];
@@ -268,11 +270,23 @@ export default function GameCanvas({
     cat.position.y = newY;
     cat.velocity.y = newVelY;
     cat.isJumping = isJumping;
-    cat.sprite = isJumping
-      ? `${currentCharacter}_jump`
-      : cat.isSliding
-      ? `${currentCharacter}_sliding`
-      : currentCharacter;
+
+    // sprite 업데이트
+    if (isJumping) {
+      cat.sprite = `${currentCharacter}_jump`;
+    } else if (cat.isSliding) {
+      cat.sprite = `${currentCharacter}_sliding`;
+    } else if (currentCharacter === "bulkcat") {
+      // bulkcat 달리기 프레임 토글 (3초마다)
+      const currentTime = Date.now();
+
+      if (currentTime % 10 === 0) {
+        setBulkcatRunFrame((prev: number) => (prev === 0 ? 1 : 0));
+      }
+      cat.sprite = "bulkcat1"; // 실제 렌더링에서는 bulkcatRunFrame 사용
+    } else {
+      cat.sprite = currentCharacter;
+    }
 
     // 게임의 점수,스테이지,속도 처리
     // 일정 점수마다 스테이지 증가 및 속도 증가
@@ -282,7 +296,7 @@ export default function GameCanvas({
     // 21스테이지 이상: 7 + 0.5씩 증가
     // 테스트를 위한 스코어 조정 추후 수정 필요
     const newScore = gameState.score + 1;
-    const newStage = Math.floor(newScore / 10) + 1;
+    const newStage = Math.floor(newScore / 100) + 1;
     let newSpeed = gameState.speed;
     if (newStage > gameState.stage) {
       if (newStage <= 10) newSpeed = 2 + (newStage - 1) * 0.2;
@@ -414,7 +428,7 @@ export default function GameCanvas({
     setCat((prev) => ({
       ...prev,
       isSliding: false,
-      sprite: currentCharacter,
+      sprite: currentCharacter === "bulkcat" ? "bulkcat1" : currentCharacter,
       collisionBox: getCharacterHitbox(currentCharacter, false),
     }));
   };
@@ -429,7 +443,8 @@ export default function GameCanvas({
       // Update cat sprite and hitbox immediately
       setCat((prev) => ({
         ...prev,
-        sprite: selectedCharacter,
+        sprite:
+          selectedCharacter === "bulkcat" ? "bulkcat1" : selectedCharacter,
         collisionBox: getCharacterHitbox(selectedCharacter, prev.isSliding),
       }));
     }
@@ -441,6 +456,11 @@ export default function GameCanvas({
     if (shouldSetPhase) {
       setGamePhase(GamePhase.START);
     }
+
+    // 캐릭터 초기화 (bcat으로 리셋)
+    setCurrentCharacter("bcat");
+    setBulkcatRunFrame(0);
+
     const initialGameState: GameState = {
       score: 0,
       stage: 1,
@@ -452,10 +472,10 @@ export default function GameCanvas({
       position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
       velocity: { x: 0, y: 0 },
       size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-      collisionBox: getCharacterHitbox(currentCharacter, false),
+      collisionBox: getCharacterHitbox("bcat", false),
       isJumping: false,
       isSliding: false,
-      sprite: currentCharacter,
+      sprite: "bcat",
     };
 
     setGameState(initialGameState);
@@ -579,7 +599,12 @@ export default function GameCanvas({
       ctx.fillText(`Speed: ${gameState.speed.toFixed(1)}x`, 20, 70);
 
       // Draw cat
-      const catImage = images[cat.sprite];
+      let catSpriteKey = cat.sprite;
+      // bulkcat 달리기 애니메이션 처리
+      if (currentCharacter === "bulkcat" && !cat.isJumping && !cat.isSliding) {
+        catSpriteKey = bulkcatRunFrame === 0 ? "bulkcat1" : "bulkcat2";
+      }
+      const catImage = images[catSpriteKey];
       if (catImage && catImage.complete && catImage.naturalWidth > 0) {
         ctx.drawImage(
           catImage,
