@@ -19,8 +19,8 @@ export default function RandomBox({
   const [isAnimating, setIsAnimating] = useState(false);
 
   // 다양한 랜덤 이미지 목록
-  // "/buff/trashMeet.png",    "/babycat/bcat.svg",
-  const randomImages = ["/buff/bulkupmeet.png", "/buff/churu.png"];
+  // "/buff/trashMeet.png",    "/babycat/bcat.svg",, "/buff/churu.png"
+  const randomImages = ["/buff/bulkupmeet.png"];
 
   // 이미지 선택 및 애니메이션 효과
   useEffect(() => {
