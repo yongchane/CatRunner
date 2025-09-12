@@ -43,7 +43,7 @@ export function useImageLoader() {
       { name: "bulkcat1", src: "/bulkcat/bulkcat.svg" },
       { name: "bulkcat2", src: "/bulkcat/bulkcat_run.svg" },
       { name: "bulkcat_jump", src: "/bulkcat/bulkcat_jump.svg" },
-      { name: "bulkcat_sliding", src: "/bulkcat/bulkcat.png" },
+      { name: "bulkcat_sliding", src: "/bulkcat/bulkcat_slide.svg" },
     ];
 
     const loadAllImages = async () => {

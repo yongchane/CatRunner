@@ -122,14 +122,18 @@ export default function GameCanvas({
     canvasWidth,
   });
 
-
   // Cat actions
   const jump = useCallback(() => {
     setCat((prev) => {
       if (prev.isJumping || prev.isSliding) return prev;
+
+      // bulkcat일 때는 점프력을 10% 감소
+      const jumpForce =
+        currentCharacter === "bulkcat" ? JUMP_FORCE * 0.8 : JUMP_FORCE;
+
       return {
         ...prev,
-        velocity: { ...prev.velocity, y: JUMP_FORCE },
+        velocity: { ...prev.velocity, y: jumpForce },
         isJumping: true,
         sprite:
           currentCharacter === "bulkcat"
@@ -145,11 +149,12 @@ export default function GameCanvas({
       let newY = prev.position.y;
       let newVelY = prev.velocity.y;
       let newIsJumping = prev.isJumping;
-      
+
       // bulkcat일 때는 1.5배 크기를 고려한 ground 위치 계산
-      const effectiveHeight = currentCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
+      const effectiveHeight =
+        currentCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
       const groundLevel = GROUND_Y - effectiveHeight;
-      
+
       if (prev.position.y < groundLevel) {
         newY = groundLevel;
         newVelY = 0;
@@ -273,7 +278,8 @@ export default function GameCanvas({
     let isJumping = catState.isJumping;
 
     // bulkcat일 때는 1.5배 크기를 고려한 ground 위치 계산
-    const effectiveHeight = currentCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
+    const effectiveHeight =
+      currentCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
     const groundLevel = GROUND_Y - effectiveHeight;
 
     if (newY >= groundLevel) {
@@ -342,7 +348,7 @@ export default function GameCanvas({
           setBulkcatHitCount((prev) => prev + 1);
           setBulkcatIsImmune(true);
           console.log("BulkCat first collision! Immune for 2 seconds");
-          
+
           // 2초 후 면역 해제
           setTimeout(() => {
             setBulkcatIsImmune(false);
@@ -404,7 +410,7 @@ export default function GameCanvas({
 
     if (selectedCharacter) {
       setCurrentCharacter(selectedCharacter);
-      
+
       // 캐릭터별 상태 초기화
       if (selectedCharacter === "bulkcat") {
         // BulkCat 선택 시 무적 상태 초기화
@@ -418,13 +424,15 @@ export default function GameCanvas({
         setBulkcatIsImmune(false);
         setBulkcatRunFrame(0);
       }
-      
+
       setCat((prev) => {
         // bulkcat일 때는 올바른 ground 위치 계산
-        const effectiveHeight = selectedCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
+        const effectiveHeight =
+          selectedCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
         const groundLevel = GROUND_Y - effectiveHeight;
-        const newY = prev.position.y > groundLevel ? groundLevel : prev.position.y;
-        
+        const newY =
+          prev.position.y > groundLevel ? groundLevel : prev.position.y;
+
         return {
           ...prev,
           position: { ...prev.position, y: newY },
