@@ -1,10 +1,10 @@
 <svg viewBox="0 0 25 20" xmlns="http://www.w3.org/2000/svg">
   <!-- 몸체 -->
-  <rect x="8" y="8" width="10" height="6" fill="#d3d3d3"/>
+  <rect x="8" y="8" width="10" height="6" fill="#d3d3d3cd"/>
   <!-- 머리 -->
   <rect x="6" y="6" width="6" height="6" fill="#e6e6e6"/>
   <!-- 부리 -->
-  <rect x="4" y="8" width="2" height="2" fill="#ffa500"/>
+  <rect x="4" y="8" width="2" height="2" fill="#000"/>
   <!-- 눈 -->
   <rect x="7" y="8" width="1" height="1" fill="#000"/>
   <!-- 날개 -->
@@ -13,6 +13,6 @@
   <!-- 꼬리 -->
   <rect x="18" y="9" width="4" height="4" fill="#b8b8b8"/>
   <!-- 발 -->
-  <rect x="10" y="14" width="1" height="3" fill="#ffa500"/>
-  <rect x="12" y="14" width="1" height="3" fill="#ffa500"/>
+  <rect x="10" y="14" width="1" height="3" fill="#000"/>
+  <rect x="12" y="14" width="1" height="3" fill="#000"/>
 </svg>

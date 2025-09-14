@@ -69,61 +69,67 @@ export function useObstacleManager({
 
     let newObstacle: Obstacle;
 
-    // helper: base -> doubled size, and position for ground-based obstacles
-    const makeGroundObstacle = (
-      baseW: number,
-      baseH: number,
-      type: Obstacle["type"]
-    ) => {
-      const w = baseW * 2;
-      const h = baseH * 2;
-      return {
-        position: { x: canvasWidth, y: GROUND_Y - h },
-        size: { width: w, height: h },
-        type,
-      } as Obstacle;
-    };
-
     switch (randomType) {
       case "bird": {
-        // bird은 공중에 떠있는 y-offset을 고정(기존대로 유지)
-        const baseW = 25;
-        const baseH = 20;
+        // bird은 공중에 떠있는 y-offset을 랜덤화 (-200 ~ -90)
+        const randomY = GROUND_Y - (Math.random() * 110 + 90); // -200 ~ -90 범위
         newObstacle = {
-          position: { x: canvasWidth, y: GROUND_Y - 150 },
-          size: { width: baseW * 2, height: baseH * 2 },
+          position: { x: canvasWidth, y: randomY },
+          size: { width: 25, height: 20 }, // 원본 크기로 히트박스 설정
           type: "bird",
         };
         break;
       }
       case "rock":
-        newObstacle = makeGroundObstacle(25, 25, "rock");
+        newObstacle = {
+          position: { x: canvasWidth, y: GROUND_Y - 25 },
+          size: { width: 25, height: 25 },
+          type: "rock",
+        };
         break;
       case "dog":
-        newObstacle = makeGroundObstacle(30, 25, "dog");
+        newObstacle = {
+          position: { x: canvasWidth, y: GROUND_Y - 25 },
+          size: { width: 30, height: 25 },
+          type: "dog",
+        };
         break;
       case "mouse":
-        newObstacle = makeGroundObstacle(26, 12, "mouse");
+        newObstacle = {
+          position: { x: canvasWidth, y: GROUND_Y - 12 },
+          size: { width: 26, height: 12 },
+          type: "mouse",
+        };
         break;
       case "fish": {
-        // fish 위치는 기존 오프셋 유지
-        const baseW = 22;
-        const baseH = 15;
+        const randomY = GROUND_Y - (Math.random() * 80 + 40); // 공중 장애물
         newObstacle = {
-          position: { x: canvasWidth, y: GROUND_Y - 60 },
-          size: { width: baseW * 2, height: baseH * 2 },
+          position: { x: canvasWidth, y: randomY },
+          size: { width: 22, height: 15 },
           type: "fish",
         };
         break;
       }
       case "spider":
-        newObstacle = makeGroundObstacle(18, 18, "spider");
+        newObstacle = {
+          position: { x: canvasWidth, y: GROUND_Y - 18 },
+          size: { width: 18, height: 18 },
+          type: "spider",
+        };
         break;
       case "yarn":
-        newObstacle = makeGroundObstacle(24, 24, "yarn");
+        newObstacle = {
+          position: { x: canvasWidth, y: GROUND_Y - 24 },
+          size: { width: 24, height: 24 },
+          type: "yarn",
+        };
         break;
       default: // cactus
-        newObstacle = makeGroundObstacle(20, 30, "cactus");
+        newObstacle = {
+          position: { x: canvasWidth, y: GROUND_Y - 30 },
+          size: { width: 20, height: 30 },
+          type: "cactus",
+        };
         break;
     }
 

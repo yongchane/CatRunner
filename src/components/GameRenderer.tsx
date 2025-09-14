@@ -160,15 +160,27 @@ function renderGameScreen(
   obstacles.forEach((obstacle) => {
     const obstacleImage = obstacleImages[obstacle.type];
     if (obstacleImagesLoaded && obstacleImage && obstacleImage.complete && obstacleImage.naturalWidth > 0) {
+      // 렌더링할 때 크기를 2배로 키움 (히트박스는 원본 크기 유지)
+      const renderWidth = obstacle.size.width * 2;
+      const renderHeight = obstacle.size.height * 2;
+      // 중앙 정렬을 위해 위치 조정
+      const renderX = obstacle.position.x - (renderWidth - obstacle.size.width) / 2;
+      const renderY = obstacle.position.y - (renderHeight - obstacle.size.height) / 2;
+      
       ctx.drawImage(
         obstacleImage,
-        obstacle.position.x,
-        obstacle.position.y,
-        obstacle.size.width,
-        obstacle.size.height
+        renderX,
+        renderY,
+        renderWidth,
+        renderHeight
       );
     } else {
-      // Fallback to colored rectangles if SVG not loaded
+      // Fallback to colored rectangles if SVG not loaded (2배 크기)
+      const renderWidth = obstacle.size.width * 2;
+      const renderHeight = obstacle.size.height * 2;
+      const renderX = obstacle.position.x - (renderWidth - obstacle.size.width) / 2;
+      const renderY = obstacle.position.y - (renderHeight - obstacle.size.height) / 2;
+      
       if (obstacle.type === "cactus") ctx.fillStyle = "#2E7D32";
       else if (obstacle.type === "rock") ctx.fillStyle = "#5D4037";
       else if (obstacle.type === "bird") ctx.fillStyle = "#1976D2";
@@ -180,10 +192,10 @@ function renderGameScreen(
       else ctx.fillStyle = "#666666";
       
       ctx.fillRect(
-        obstacle.position.x,
-        obstacle.position.y,
-        obstacle.size.width,
-        obstacle.size.height
+        renderX,
+        renderY,
+        renderWidth,
+        renderHeight
       );
     }
   });
