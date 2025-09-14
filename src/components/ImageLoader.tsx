@@ -5,11 +5,14 @@ import { useState, useEffect } from "react";
 export function useImageLoader() {
   const [images, setImages] = useState<{ [key: string]: HTMLImageElement }>({});
   const [imagesLoaded, setImagesLoaded] = useState(false);
+  const [obstacleImages, setObstacleImages] = useState<{ [key: string]: HTMLImageElement }>({});
+  const [obstacleImagesLoaded, setObstacleImagesLoaded] = useState(false);
 
   useEffect(() => {
     const loadImage = (
       name: string,
-      src: string
+      src: string,
+      setImageState: React.Dispatch<React.SetStateAction<{ [key: string]: HTMLImageElement }>>
     ): Promise<HTMLImageElement> => {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -20,7 +23,7 @@ export function useImageLoader() {
         }, 10000);
         img.onload = () => {
           clearTimeout(timeout);
-          setImages((prev) => ({ ...prev, [name]: img }));
+          setImageState((prev) => ({ ...prev, [name]: img }));
           resolve(img);
         };
         img.onerror = (error) => {
@@ -46,20 +49,47 @@ export function useImageLoader() {
       { name: "bulkcat_sliding", src: "/bulkcat/bulkcat_slide.svg" },
     ];
 
+    // 장애물 이미지 목록
+    const obstacleImageList = [
+      { name: "bird", src: "/obstacle/bird.svg" },
+      { name: "rock", src: "/obstacle/rock.svg" },
+      { name: "cactus", src: "/obstacle/cactus.svg" },
+      { name: "dog", src: "/obstacle/dog.svg" },
+      { name: "mouse", src: "/obstacle/mouse.svg" },
+      { name: "fish", src: "/obstacle/fish.svg" },
+      { name: "spider", src: "/obstacle/spider.svg" },
+      { name: "yarn", src: "/obstacle/yarn.svg" },
+    ];
+
     const loadAllImages = async () => {
       try {
+        // 캐릭터 이미지 로드
         await Promise.all(
-          imageList.map(({ name, src }) => loadImage(name, src))
+          imageList.map(({ name, src }) => loadImage(name, src, setImages))
         );
         console.log("🎉 All character images loaded successfully");
         setImagesLoaded(true);
       } catch (error) {
-        console.error("🚨 Some images failed to load:", error);
+        console.error("🚨 Some character images failed to load:", error);
+      }
+    };
+
+    const loadAllObstacleImages = async () => {
+      try {
+        // 장애물 이미지 로드
+        await Promise.all(
+          obstacleImageList.map(({ name, src }) => loadImage(name, src, setObstacleImages))
+        );
+        console.log("🎉 All obstacle images loaded successfully");
+        setObstacleImagesLoaded(true);
+      } catch (error) {
+        console.error("🚨 Some obstacle images failed to load:", error);
       }
     };
 
     loadAllImages();
+    loadAllObstacleImages();
   }, []);
 
-  return { images, imagesLoaded };
+  return { images, imagesLoaded, obstacleImages, obstacleImagesLoaded };
 }

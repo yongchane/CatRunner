@@ -96,7 +96,7 @@ export default function GameCanvas({
   const catRef = useRef(cat);
 
   // Initialize managers
-  const { images, imagesLoaded } = useImageLoader();
+  const { images, imagesLoaded, obstacleImages, obstacleImagesLoaded } = useImageLoader();
 
   const {
     gameState,
@@ -238,7 +238,9 @@ export default function GameCanvas({
     cat,
     obstacles,
     images,
+    obstacleImages,
     imagesLoaded,
+    obstacleImagesLoaded,
     isImmune: currentCharacter === "bulkcat" ? bulkcatIsImmune : false,
   });
 

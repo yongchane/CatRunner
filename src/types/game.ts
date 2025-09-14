@@ -32,7 +32,7 @@ export interface Cat {
 export interface Obstacle {
   position: Position;
   size: Size;
-  type: 'cactus' | 'rock' | 'bird';
+  type: 'cactus' | 'rock' | 'bird' | 'dog' | 'mouse' | 'fish' | 'spider' | 'yarn';
 }
 
 export enum GamePhase {

@@ -1,0 +1,14 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- 기본 원형 -->
+  <rect x="6" y="6" width="12" height="12" fill="#FF6B9D"/>
+  <!-- 털실 감긴 모양 -->
+  <rect x="4" y="8" width="16" height="2" fill="#C44569"/>
+  <rect x="4" y="12" width="16" height="2" fill="#C44569"/>
+  <rect x="4" y="16" width="16" height="2" fill="#C44569"/>
+  <!-- 세로 선 -->
+  <rect x="8" y="4" width="2" height="16" fill="#C44569"/>
+  <rect x="14" y="4" width="2" height="16" fill="#C44569"/>
+  <!-- 풀린 실 -->
+  <rect x="18" y="10" width="4" height="1" fill="#FF6B9D"/>
+  <rect x="20" y="11" width="2" height="1" fill="#FF6B9D"/>
+</svg>

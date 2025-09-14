@@ -15,7 +15,9 @@ interface GameRendererProps {
   cat: Cat;
   obstacles: Obstacle[];
   images: { [key: string]: HTMLImageElement };
+  obstacleImages: { [key: string]: HTMLImageElement };
   imagesLoaded: boolean;
+  obstacleImagesLoaded: boolean;
   isImmune?: boolean;
 }
 
@@ -27,7 +29,9 @@ export function useGameRenderer({
   cat,
   obstacles,
   images,
+  obstacleImages,
   imagesLoaded,
+  obstacleImagesLoaded,
   isImmune = false,
 }: GameRendererProps) {
   // 게임 화면 렌더링
@@ -45,13 +49,13 @@ export function useGameRenderer({
       gamePhase === GamePhase.PLAYING ||
       gamePhase === GamePhase.GAME_OVER
     ) {
-      renderGameScreen(ctx, canvasWidth, gameState, cat, obstacles, images, isImmune);
+      renderGameScreen(ctx, canvasWidth, gameState, cat, obstacles, images, obstacleImages, obstacleImagesLoaded, isImmune);
       
       if (gamePhase === GamePhase.GAME_OVER) {
         renderGameOverScreen(ctx, canvasWidth, gameState);
       }
     }
-  }, [canvasRef, canvasWidth, gamePhase, gameState, cat, obstacles, images, imagesLoaded]);
+  }, [canvasRef, canvasWidth, gamePhase, gameState, cat, obstacles, images, obstacleImages, imagesLoaded, obstacleImagesLoaded, isImmune]);
 }
 
 function renderStartScreen(
@@ -92,6 +96,8 @@ function renderGameScreen(
   cat: Cat,
   obstacles: Obstacle[],
   images: { [key: string]: HTMLImageElement },
+  obstacleImages: { [key: string]: HTMLImageElement },
+  obstacleImagesLoaded: boolean,
   isImmune: boolean = false
 ) {
   // Draw ground
@@ -152,15 +158,34 @@ function renderGameScreen(
 
   // Draw obstacles
   obstacles.forEach((obstacle) => {
-    if (obstacle.type === "cactus") ctx.fillStyle = "#2E7D32";
-    else if (obstacle.type === "rock") ctx.fillStyle = "#5D4037";
-    else if (obstacle.type === "bird") ctx.fillStyle = "#1976D2";
-    ctx.fillRect(
-      obstacle.position.x,
-      obstacle.position.y,
-      obstacle.size.width,
-      obstacle.size.height
-    );
+    const obstacleImage = obstacleImages[obstacle.type];
+    if (obstacleImagesLoaded && obstacleImage && obstacleImage.complete && obstacleImage.naturalWidth > 0) {
+      ctx.drawImage(
+        obstacleImage,
+        obstacle.position.x,
+        obstacle.position.y,
+        obstacle.size.width,
+        obstacle.size.height
+      );
+    } else {
+      // Fallback to colored rectangles if SVG not loaded
+      if (obstacle.type === "cactus") ctx.fillStyle = "#2E7D32";
+      else if (obstacle.type === "rock") ctx.fillStyle = "#5D4037";
+      else if (obstacle.type === "bird") ctx.fillStyle = "#1976D2";
+      else if (obstacle.type === "dog") ctx.fillStyle = "#8B4513";
+      else if (obstacle.type === "mouse") ctx.fillStyle = "#8B7D6B";
+      else if (obstacle.type === "fish") ctx.fillStyle = "#FF6B35";
+      else if (obstacle.type === "spider") ctx.fillStyle = "#2c1810";
+      else if (obstacle.type === "yarn") ctx.fillStyle = "#FF6B9D";
+      else ctx.fillStyle = "#666666";
+      
+      ctx.fillRect(
+        obstacle.position.x,
+        obstacle.position.y,
+        obstacle.size.width,
+        obstacle.size.height
+      );
+    }
   });
 }
 

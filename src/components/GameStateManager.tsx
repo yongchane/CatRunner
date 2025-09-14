@@ -35,7 +35,7 @@ export function useGameStateManager({
   // 게임 상태 업데이트
   const updateGameState = useCallback(() => {
     const newScore = gameStateRef.current.score + 1;
-    const newStage = Math.floor(newScore / 20) + 1;
+    const newStage = Math.floor(newScore / 100) + 1;
     let newSpeed = gameStateRef.current.speed;
 
     // 스테이지별 속도 조정
