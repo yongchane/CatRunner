@@ -1,0 +1,19 @@
+<svg viewBox="0 0 26 12" xmlns="http://www.w3.org/2000/svg">
+  <!-- 몸체 -->
+  <rect x="6" y="5" width="12" height="4" fill="#8B7D6B"/>
+  <!-- 머리 -->
+  <rect x="3" y="6" width="4" height="3" fill="#A0958A"/>
+  <!-- 귀 -->
+  <rect x="4" y="4" width="2" height="2" fill="#8B7D6B"/>
+  <rect x="6" y="4" width="2" height="2" fill="#8B7D6B"/>
+  <!-- 눈 -->
+  <rect x="4" y="6" width="1" height="1" fill="#000"/>
+  <!-- 코 -->
+  <rect x="2" y="7" width="1" height="1" fill="#FF69B4"/>
+  <!-- 꼬리 -->
+  <rect x="18" y="6" width="6" height="1" fill="#8B7D6B"/>
+  <rect x="24" y="7" width="2" height="1" fill="#8B7D6B"/>
+  <!-- 발 -->
+  <rect x="8" y="9" width="1" height="1" fill="#8B7D6B"/>
+  <rect x="12" y="9" width="1" height="1" fill="#8B7D6B"/>
+</svg>
