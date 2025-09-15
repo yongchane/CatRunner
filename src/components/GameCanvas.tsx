@@ -59,15 +59,23 @@ export default function GameCanvas({
           offset: { x: 10, y: 15 },
           size: {
             width: scaledWidth - 10,
-            height: scaledHeight - 90,
+            height: scaledHeight - 10,
+          },
+        };
+      } else if (isSliding) {
+        return {
+          offset: { x: 30, y: 55 },
+          size: {
+            width: scaledWidth - 40,
+            height: scaledHeight - 50,
           },
         };
       }
       return {
-        offset: { x: 25, y: 25 }, // 실제 고양이 몸체에 맞게 더 안쪽으로
+        offset: { x: 7, y: 25 }, // 실제 고양이 몸체에 맞게 더 안쪽으로
         size: {
-          width: isSliding ? scaledWidth - 60 : scaledWidth - 50, // 실제 몸체 크기에 맞춤
-          height: isSliding ? scaledHeight - 70 : scaledHeight - 60, // 머리부터 발까지만
+          width: isSliding ? scaledWidth - 10 : scaledWidth - 5, // 실제 몸체 크기에 맞춤
+          height: isSliding ? scaledHeight - 10 : scaledHeight - 20, // 머리부터 발까지만
         },
       };
     } else if (character === "cat") {
