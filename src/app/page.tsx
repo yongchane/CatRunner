@@ -16,9 +16,7 @@ export default function Home() {
         <h1 className="text-4xl font-bold text-center mb-2 text-gray-800">
           🐱 Cat Runner
         </h1>
-        <p className="text-center text-gray-600 mb-8">
-          Chrome Dino inspired endless running game
-        </p>
+        <p className="text-center text-gray-600 mb-8">{/* 설명 적기 */}</p>
 
         <GameCanvas
           onGameOver={handleGameOver}
@@ -26,8 +24,7 @@ export default function Home() {
         />
 
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Jump over obstacles and run as far as you can!</p>
-          <p>Game gets faster as you progress through stages.</p>
+          <p>{/* 설명 칸 */}</p>
         </div>
       </div>
     </main>
