@@ -45,36 +45,35 @@ export default function GameCanvas({
     isSliding: boolean = false
   ) => {
     const baseHitbox = {
-      offset: { x: 8, y: 8 },
-      size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+      offset: { x: 20, y: 20 }, // 실제 고양이 몸체에 맞게
+      size: { width: CAT_WIDTH - 30, height: CAT_HEIGHT - 35 }, // 실제 몸체 크기
     };
 
     if (character === "bulkcat") {
       const scaledWidth = CAT_WIDTH * 1.5;
       const scaledHeight = CAT_HEIGHT * 1.5;
       return {
-        offset: { x: 5, y: 5 },
+        offset: { x: 25, y: 25 }, // 실제 고양이 몸체에 맞게 더 안쪽으로
         size: {
-          width: isSliding ? scaledWidth + 15 : scaledWidth + 30,
-          height: isSliding ? scaledHeight - 15 : scaledHeight + 20,
+          width: isSliding ? scaledWidth - 60 : scaledWidth - 50, // 실제 몸체 크기에 맞춤
+          height: isSliding ? scaledHeight - 70 : scaledHeight - 60, // 머리부터 발까지만
         },
       };
     } else if (character === "cat") {
       return {
-        offset: { x: 10, y: 10 },
+        offset: { x: 20, y: 20 }, // 실제 고양이 몸체에 맞게
         size: {
-          width: isSliding ? CAT_WIDTH - 10 : CAT_WIDTH - 5,
-          height: isSliding ? CAT_HEIGHT - 15 : CAT_HEIGHT - 5,
+          width: isSliding ? CAT_WIDTH - 40 : CAT_WIDTH - 30,
+          height: isSliding ? CAT_HEIGHT - 45 : CAT_HEIGHT - 35,
         },
       };
     }
 
     // Default hitbox for bcat and sliding
     if (isSliding) {
-      const svgToRender = (v: number) => v * (CAT_WIDTH / 320);
       return {
-        offset: { x: 8, y: 8 },
-        size: { width: svgToRender(28), height: svgToRender(20) },
+        offset: { x: 20, y: 35 }, // 슬라이딩 시 실제 몸체 위치에 맞춤
+        size: { width: CAT_WIDTH - 35, height: CAT_HEIGHT - 50 }, // 슬라이딩 몸체 크기
       };
     }
 
@@ -242,6 +241,8 @@ export default function GameCanvas({
     imagesLoaded,
     obstacleImagesLoaded,
     isImmune: currentCharacter === "bulkcat" ? bulkcatIsImmune : false,
+    currentCharacter,
+    bulkcatHitCount,
   });
 
   // Sync cat ref
@@ -339,23 +340,32 @@ export default function GameCanvas({
     const collidedObstacle = obstacleManager.checkAllCollisions(catState);
     if (collidedObstacle) {
       if (currentCharacter === "bulkcat" && !bulkcatIsImmune) {
-        // BulkCat 충돌 처리
-        if (bulkcatHitCount >= 1) {
-          // 2번째 충돌 - 게임오버
+        // BulkCat 충돌 처리 (3번까지 허용)
+        const newHitCount = bulkcatHitCount + 1;
+        setBulkcatHitCount(newHitCount);
+        
+        if (newHitCount >= 3) {
+          // 3번째 충돌 - 게임오버
           endGame();
           onGameOver?.(gameStateData.score);
           return;
         } else {
-          // 첫 번째 충돌 - 면역 상태 활성화
-          setBulkcatHitCount((prev) => prev + 1);
+          // 1~2번째 충돌 - 잠시 면역 상태 (0.5초)
           setBulkcatIsImmune(true);
-          console.log("BulkCat first collision! Immune for 2 seconds");
-
-          // 2초 후 면역 해제
+          console.log(`🔥 BulkCat collision ${newHitCount}/3! Hearts remaining: ${3 - newHitCount}`);
+          console.log(`Collision details:`, {
+            catPosition: catState.position,
+            catHitbox: catState.collisionBox,
+            obstacleType: collidedObstacle.type,
+            obstaclePosition: collidedObstacle.position,
+            obstacleSize: collidedObstacle.size
+          });
+          
+          // 0.5초 후 면역 해제 (너무 짧은 간격 충돌 방지)
           setTimeout(() => {
             setBulkcatIsImmune(false);
             console.log("BulkCat immunity ended");
-          }, 2000);
+          }, 500);
 
           // 게임 계속
           setCat({ ...catState });
@@ -419,7 +429,7 @@ export default function GameCanvas({
         setBulkcatHitCount(0);
         setBulkcatIsImmune(false);
         setBulkcatRunFrame(0);
-        console.log("BulkCat selected! Collision immunity reset to 2 hits");
+        console.log("BulkCat selected! Collision immunity reset to 3 hits");
       } else {
         // 다른 캐릭터 선택 시 BulkCat 상태 리셋
         setBulkcatHitCount(0);

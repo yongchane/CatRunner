@@ -5,7 +5,7 @@ import { GamePhase, type GameState, type Cat, type Obstacle } from "@/types/game
 
 const CANVAS_HEIGHT = 400;
 const GROUND_Y = 300;
-const DEBUG_COLLISION = false;
+const DEBUG_COLLISION = true;
 
 interface GameRendererProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
@@ -19,6 +19,8 @@ interface GameRendererProps {
   imagesLoaded: boolean;
   obstacleImagesLoaded: boolean;
   isImmune?: boolean;
+  currentCharacter?: string;
+  bulkcatHitCount?: number;
 }
 
 export function useGameRenderer({
@@ -33,6 +35,8 @@ export function useGameRenderer({
   imagesLoaded,
   obstacleImagesLoaded,
   isImmune = false,
+  currentCharacter = "bcat",
+  bulkcatHitCount = 0,
 }: GameRendererProps) {
   // 게임 화면 렌더링
   useEffect(() => {
@@ -49,13 +53,13 @@ export function useGameRenderer({
       gamePhase === GamePhase.PLAYING ||
       gamePhase === GamePhase.GAME_OVER
     ) {
-      renderGameScreen(ctx, canvasWidth, gameState, cat, obstacles, images, obstacleImages, obstacleImagesLoaded, isImmune);
+      renderGameScreen(ctx, canvasWidth, gameState, cat, obstacles, images, obstacleImages, obstacleImagesLoaded, isImmune, currentCharacter, bulkcatHitCount);
       
       if (gamePhase === GamePhase.GAME_OVER) {
         renderGameOverScreen(ctx, canvasWidth, gameState);
       }
     }
-  }, [canvasRef, canvasWidth, gamePhase, gameState, cat, obstacles, images, obstacleImages, imagesLoaded, obstacleImagesLoaded, isImmune]);
+  }, [canvasRef, canvasWidth, gamePhase, gameState, cat, obstacles, images, obstacleImages, imagesLoaded, obstacleImagesLoaded, isImmune, currentCharacter, bulkcatHitCount]);
 }
 
 function renderStartScreen(
@@ -98,7 +102,9 @@ function renderGameScreen(
   images: { [key: string]: HTMLImageElement },
   obstacleImages: { [key: string]: HTMLImageElement },
   obstacleImagesLoaded: boolean,
-  isImmune: boolean = false
+  isImmune: boolean = false,
+  currentCharacter: string = "bcat",
+  bulkcatHitCount: number = 0
 ) {
   // Draw ground
   ctx.fillStyle = "#999999";
@@ -115,6 +121,24 @@ function renderGameScreen(
   );
   ctx.fillText(`Stage: ${gameState.stage}`, 20, 50);
   ctx.fillText(`Speed: ${gameState.speed.toFixed(1)}x`, 20, 70);
+
+  // Draw hearts for bulkcat
+  if (currentCharacter === "bulkcat") {
+    const heartsRemaining = 3 - bulkcatHitCount;
+    const heartStartX = 20;
+    const heartY = 90;
+    
+    for (let i = 0; i < 3; i++) {
+      const x = heartStartX + i * 25;
+      if (i < heartsRemaining) {
+        // 남은 하트 (빨간색)
+        drawHeart(ctx, x, heartY, 16, "#FF0000");
+      } else {
+        // 잃은 하트 (회색)
+        drawHeart(ctx, x, heartY, 16, "#888888");
+      }
+    }
+  }
 
   // Draw cat (면역 상태일 때 반투명 효과)
   const catImage = images[cat.sprite];
@@ -199,6 +223,48 @@ function renderGameScreen(
       );
     }
   });
+}
+
+// 하트 그리기 함수
+function drawHeart(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string
+) {
+  ctx.fillStyle = color;
+  ctx.save();
+  ctx.translate(x, y);
+  
+  // 픽셀 아트 스타일 하트
+  const s = size / 16; // 스케일
+  
+  // 하트 모양을 픽셀로 그리기
+  const heartPixels = [
+    [0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  ];
+  
+  for (let row = 0; row < heartPixels.length; row++) {
+    for (let col = 0; col < heartPixels[row].length; col++) {
+      if (heartPixels[row][col] === 1) {
+        ctx.fillRect(col * s, row * s, s, s);
+      }
+    }
+  }
+  
+  ctx.restore();
 }
 
 function renderGameOverScreen(
