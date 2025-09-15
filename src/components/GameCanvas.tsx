@@ -42,16 +42,27 @@ export default function GameCanvas({
   // 캐릭터별 히트박스 설정
   const getCharacterHitbox = (
     character: string,
-    isSliding: boolean = false
+    isSliding: boolean = false,
+    isJumping: boolean = false
   ) => {
     const baseHitbox = {
-      offset: { x: 20, y: 20 }, // 실제 고양이 몸체에 맞게
-      size: { width: CAT_WIDTH - 30, height: CAT_HEIGHT - 35 }, // 실제 몸체 크기
+      offset: { x: 5, y: 25 }, // 실제 고양이 몸체에 맞게
+      size: { width: CAT_WIDTH - 5, height: CAT_HEIGHT - 20 }, // 실제 몸체 크기
     };
 
     if (character === "bulkcat") {
       const scaledWidth = CAT_WIDTH * 1.5;
       const scaledHeight = CAT_HEIGHT * 1.5;
+      // 점프 중에는 히트박스를 더 좁고 위로 이동시켜 머리/몸 중심만 검사
+      if (isJumping) {
+        return {
+          offset: { x: 10, y: 15 },
+          size: {
+            width: scaledWidth - 10,
+            height: scaledHeight - 90,
+          },
+        };
+      }
       return {
         offset: { x: 25, y: 25 }, // 실제 고양이 몸체에 맞게 더 안쪽으로
         size: {
@@ -60,8 +71,17 @@ export default function GameCanvas({
         },
       };
     } else if (character === "cat") {
+      if (isJumping) {
+        return {
+          offset: { x: 22, y: 12 },
+          size: {
+            width: CAT_WIDTH - 50,
+            height: CAT_HEIGHT - 60,
+          },
+        };
+      }
       return {
-        offset: { x: 20, y: 20 }, // 실제 고양이 몸체에 맞게
+        offset: { x: 20, y: 30 }, // 실제 고양이 몸체에 맞게
         size: {
           width: isSliding ? CAT_WIDTH - 40 : CAT_WIDTH - 30,
           height: isSliding ? CAT_HEIGHT - 45 : CAT_HEIGHT - 35,
@@ -72,8 +92,16 @@ export default function GameCanvas({
     // Default hitbox for bcat and sliding
     if (isSliding) {
       return {
-        offset: { x: 20, y: 35 }, // 슬라이딩 시 실제 몸체 위치에 맞춤
-        size: { width: CAT_WIDTH - 35, height: CAT_HEIGHT - 50 }, // 슬라이딩 몸체 크기
+        offset: { x: 5, y: 50 }, // 슬라이딩 시 실제 몸체 위치에 맞춤
+        size: { width: CAT_WIDTH - 5, height: CAT_HEIGHT - 50 }, // 슬라이딩 몸체 크기
+      };
+    }
+
+    // 점프일 때 기본 히트박스 (bcat 같은 기본 캐릭터)
+    if (isJumping) {
+      return {
+        offset: { x: 25, y: 10 },
+        size: { width: CAT_WIDTH - 25, height: CAT_HEIGHT - 10 },
       };
     }
 
@@ -95,7 +123,8 @@ export default function GameCanvas({
   const catRef = useRef(cat);
 
   // Initialize managers
-  const { images, imagesLoaded, obstacleImages, obstacleImagesLoaded } = useImageLoader();
+  const { images, imagesLoaded, obstacleImages, obstacleImagesLoaded } =
+    useImageLoader();
 
   const {
     gameState,
@@ -138,6 +167,7 @@ export default function GameCanvas({
           currentCharacter === "bulkcat"
             ? "bulkcat_jump"
             : `${currentCharacter}_jump`,
+        collisionBox: getCharacterHitbox(currentCharacter, false, true),
       };
     });
   }, [currentCharacter]);
@@ -289,6 +319,12 @@ export default function GameCanvas({
       newY = groundLevel;
       newVelY = 0;
       isJumping = false;
+      // 착지 시 히트박스 복원
+      catState.collisionBox = getCharacterHitbox(
+        currentCharacter,
+        catState.isSliding,
+        false
+      );
     }
     catState.position.y = newY;
     catState.velocity.y = newVelY;
@@ -343,7 +379,7 @@ export default function GameCanvas({
         // BulkCat 충돌 처리 (3번까지 허용)
         const newHitCount = bulkcatHitCount + 1;
         setBulkcatHitCount(newHitCount);
-        
+
         if (newHitCount >= 3) {
           // 3번째 충돌 - 게임오버
           endGame();
@@ -352,15 +388,19 @@ export default function GameCanvas({
         } else {
           // 1~2번째 충돌 - 잠시 면역 상태 (0.5초)
           setBulkcatIsImmune(true);
-          console.log(`🔥 BulkCat collision ${newHitCount}/3! Hearts remaining: ${3 - newHitCount}`);
+          console.log(
+            `🔥 BulkCat collision ${newHitCount}/3! Hearts remaining: ${
+              3 - newHitCount
+            }`
+          );
           console.log(`Collision details:`, {
             catPosition: catState.position,
             catHitbox: catState.collisionBox,
             obstacleType: collidedObstacle.type,
             obstaclePosition: collidedObstacle.position,
-            obstacleSize: collidedObstacle.size
+            obstacleSize: collidedObstacle.size,
           });
-          
+
           // 0.5초 후 면역 해제 (너무 짧은 간격 충돌 방지)
           setTimeout(() => {
             setBulkcatIsImmune(false);
