@@ -6,6 +6,7 @@ import { GamePhase } from "@/types/game";
 interface InputHandlerProps {
   gamePhase: GamePhase;
   imagesLoaded: boolean;
+  isRandomBoxPhase: boolean;
   onStartGame: () => void;
   onJump: () => void;
   onStartSlide: () => void;
@@ -18,6 +19,7 @@ interface InputHandlerProps {
 export function useInputHandler({
   gamePhase,
   imagesLoaded,
+  isRandomBoxPhase,
   onStartGame,
   onJump,
   onStartSlide,
@@ -35,7 +37,7 @@ export function useInputHandler({
         imagesLoaded
       ) {
         onStartGame();
-      } else if (gamePhase === GamePhase.PLAYING) {
+      } else if (gamePhase === GamePhase.PLAYING && !isRandomBoxPhase) {
         if (e.code === "Space" || e.code === "ArrowUp") {
           onJump();
         } else if (e.code === "ArrowDown") {
@@ -55,7 +57,7 @@ export function useInputHandler({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (gamePhase === GamePhase.PLAYING && e.code === "ArrowDown") {
+      if (gamePhase === GamePhase.PLAYING && !isRandomBoxPhase && e.code === "ArrowDown") {
         onEndSlide();
         if (slideTimeout.current) {
           clearTimeout(slideTimeout.current);
@@ -75,6 +77,7 @@ export function useInputHandler({
   }, [
     gamePhase,
     imagesLoaded,
+    isRandomBoxPhase,
     onStartGame,
     onJump,
     onStartSlide,

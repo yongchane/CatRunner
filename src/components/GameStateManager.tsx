@@ -32,10 +32,10 @@ export function useGameStateManager({
     gameStateRef.current = gameState;
   }, [gameState]);
 
-  // 게임 상태 업데이트
+  // 게임 상태 업데이트 속도 조절 가능 - 수정 필요
   const updateGameState = useCallback(() => {
     const newScore = gameStateRef.current.score + 1;
-    const newStage = Math.floor(newScore / 10) + 1;
+    const newStage = Math.floor(newScore / 1000) + 1;
     let newSpeed = gameStateRef.current.speed;
 
     // 스테이지별 속도 조정

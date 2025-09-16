@@ -7,6 +7,7 @@ interface RandomBoxProps {
   onComplete: (selectedCharacter?: string) => void;
   canvasWidth: number;
   canvasHeight: number;
+  onPhaseChange?: (phase: "box" | "spinning" | "result") => void;
 }
 
 export default function RandomBox({
@@ -14,53 +15,76 @@ export default function RandomBox({
   onComplete,
   canvasWidth,
   canvasHeight,
+  onPhaseChange,
 }: RandomBoxProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [phase, setPhase] = useState<"box" | "spinning" | "result">("box");
 
-  // 다양한 랜덤 이미지 목록
-  // "/buff/trashMeet.png",    "/babycat/bcat.svg",, "/buff/churu.png"
-  const randomImages = ["/buff/bulkupmeet.png"];
+  // 능력치/캐릭터 목록
+  const abilities = [
+    {
+      name: "bulkcat",
+      image: "/buff/bulkupmeet.svg",
+      description: "Strong Cat - 3 Lives!",
+    },
+    {
+      name: "cat",
+      image: "/buff/churu.svg",
+      description: "Speed Cat - Fast Runner!",
+    },
+    {
+      name: "bcat",
+      image: "/babycat/bcat.svg",
+      description: "Baby Cat - Default!",
+    },
+  ];
 
-  // 이미지 선택 및 애니메이션 효과
+  // 3단계 애니메이션 효과
   useEffect(() => {
     if (isVisible && !isAnimating) {
       setIsAnimating(true);
+      setPhase("box");
+      onPhaseChange?.("box");
+      setSelectedImage("/transform/box.svg");
 
-      let rotationCount = 0;
-      const maxRotations = 15;
+      // 1단계: Box 표시 (2초)
+      setTimeout(() => {
+        setPhase("spinning");
+        onPhaseChange?.("spinning");
 
-      const rotateImages = () => {
-        if (rotationCount < maxRotations) {
-          const randomIndex = Math.floor(Math.random() * randomImages.length);
-          setSelectedImage(randomImages[randomIndex]);
-          rotationCount++;
-          setTimeout(rotateImages, 110);
-        } else {
-          const finalIndex = Math.floor(Math.random() * randomImages.length);
-          const finalImage = randomImages[finalIndex];
-          setSelectedImage(finalImage);
+        // 2단계: 능력치 회전 (3초)
+        let rotationCount = 0;
+        const maxRotations = 20;
 
-          setTimeout(() => {
-            setIsAnimating(false);
-            setSelectedImage(null);
+        const rotateAbilities = () => {
+          if (rotationCount < maxRotations) {
+            const randomIndex = Math.floor(Math.random() * abilities.length);
+            setSelectedImage(abilities[randomIndex].image);
+            rotationCount++;
+            setTimeout(rotateAbilities, 150);
+          } else {
+            // 3단계: 최종 능력치 결정
+            const finalIndex = Math.floor(Math.random() * abilities.length);
+            const finalAbility = abilities[finalIndex];
+            setSelectedImage(finalAbility.image);
+            setPhase("result");
+            onPhaseChange?.("result");
 
-            // Determine character based on selected image
-            let selectedCharacter = "bcat"; // default
-            if (finalImage === "/buff/bulkupmeet.png") {
-              selectedCharacter = "bulkcat";
-            } else if (finalImage === "/buff/churu.png") {
-              selectedCharacter = "cat";
-            }
+            setTimeout(() => {
+              setIsAnimating(false);
+              setSelectedImage(null);
+              setPhase("box");
 
-            onComplete(selectedCharacter);
-          }, 3400);
-        }
-      };
+              onComplete(finalAbility.name);
+            }, 1500);
+          }
+        };
 
-      rotateImages();
+        rotateAbilities();
+      }, 1500);
     }
-  }, [isVisible, isAnimating, onComplete, randomImages]);
+  }, [isVisible, isAnimating, onComplete, abilities]);
 
   if (!isVisible) return null;
 
@@ -84,34 +108,80 @@ export default function RandomBox({
         }}
       >
         <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">
-          🎁 BONUS BOX! 🎁
+          {phase === "box"
+            ? "🎁 TRANSFORMATION TIME! 🎁"
+            : phase === "spinning"
+            ? "✨ SELECTING ABILITY... ✨"
+            : "🎊 TRANSFORMATION COMPLETE! 🎊"}
         </h2>
 
-        {selectedImage && (
+        {phase === "spinning" && selectedImage && (
           <div
             className="border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center"
             style={{
               width: "200px",
               height: "200px",
-              transition: isAnimating ? "all 0.1s ease-in-out" : "none",
+              transition: "all 0.1s ease-in-out",
+              transform: "scale(1.05)",
             }}
           >
             <img
               src={selectedImage}
-              alt="Random Item"
+              alt="Ability"
               style={{
                 maxWidth: "150px",
                 maxHeight: "150px",
                 objectFit: "contain",
               }}
-              className={isAnimating ? "animate-pulse" : ""}
+              className="animate-spin"
+            />
+          </div>
+        )}
+
+        {phase === "result" && selectedImage && (
+          <div
+            className="border-2 border-dashed border-gray-400 rounded-lg flex items-center justify-center"
+            style={{
+              width: "200px",
+              height: "200px",
+              transition: "all 0.3s ease-in-out",
+            }}
+          >
+            <img
+              src={selectedImage}
+              alt="Final Ability"
+              style={{
+                maxWidth: "150px",
+                maxHeight: "150px",
+                objectFit: "contain",
+              }}
+              className="animate-pulse"
             />
           </div>
         )}
 
         <p className="text-sm text-gray-600 mt-4 text-center">
-          {isAnimating ? "선택 중..." : "보너스 획득!"}
+          {phase === "box"
+            ? "캐릭터가 변신 상자로 변했다!"
+            : phase === "spinning"
+            ? "능력치를 결정하는 중..."
+            : "새로운 능력을 얻었다!"}
         </p>
+
+        {phase === "result" && selectedImage && (
+          <div className="mt-2 text-center">
+            {abilities.map((ability) =>
+              ability.image === selectedImage ? (
+                <p
+                  key={ability.name}
+                  className="text-xs text-blue-600 font-semibold"
+                >
+                  {ability.description}
+                </p>
+              ) : null
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
