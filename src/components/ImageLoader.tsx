@@ -5,14 +5,18 @@ import { useState, useEffect } from "react";
 export function useImageLoader() {
   const [images, setImages] = useState<{ [key: string]: HTMLImageElement }>({});
   const [imagesLoaded, setImagesLoaded] = useState(false);
-  const [obstacleImages, setObstacleImages] = useState<{ [key: string]: HTMLImageElement }>({});
+  const [obstacleImages, setObstacleImages] = useState<{
+    [key: string]: HTMLImageElement;
+  }>({});
   const [obstacleImagesLoaded, setObstacleImagesLoaded] = useState(false);
 
   useEffect(() => {
     const loadImage = (
       name: string,
       src: string,
-      setImageState: React.Dispatch<React.SetStateAction<{ [key: string]: HTMLImageElement }>>
+      setImageState: React.Dispatch<
+        React.SetStateAction<{ [key: string]: HTMLImageElement }>
+      >
     ): Promise<HTMLImageElement> => {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -40,13 +44,20 @@ export function useImageLoader() {
       { name: "bcat", src: "/babycat/bcat.svg" },
       { name: "bcat_jump", src: "/babycat/bcat_jump.svg" },
       { name: "bcat_sliding", src: "/babycat/bcat_slide.svg" },
-      { name: "cat", src: "/cat/cat.png" },
+      { name: "cat", src: "/cat/cat.svg" },
+      { name: "cat2", src: "/cat/cat2.svg" },
       { name: "cat_jump", src: "/babycat/bcat_jump.svg" },
       { name: "cat_sliding", src: "/babycat/bcat_slide.svg" },
       { name: "bulkcat1", src: "/bulkcat/bulkcat.svg" },
       { name: "bulkcat2", src: "/bulkcat/bulkcat_run.svg" },
       { name: "bulkcat_jump", src: "/bulkcat/bulkcat_jump.svg" },
       { name: "bulkcat_sliding", src: "/bulkcat/bulkcat_slide.svg" },
+
+      { name: "box", src: "/transform/box1.svg" },
+      { name: "box2", src: "/transform/box2.svg" },
+      { name: "boom1", src: "/transform/boom1.svg" },
+      { name: "boom2", src: "/transform/boom2.svg" },
+      { name: "boom", src: "/transform/boom.svg" },
     ];
 
     // 장애물 이미지 목록
@@ -78,7 +89,9 @@ export function useImageLoader() {
       try {
         // 장애물 이미지 로드
         await Promise.all(
-          obstacleImageList.map(({ name, src }) => loadImage(name, src, setObstacleImages))
+          obstacleImageList.map(({ name, src }) =>
+            loadImage(name, src, setObstacleImages)
+          )
         );
         console.log("🎉 All obstacle images loaded successfully");
         setObstacleImagesLoaded(true);
