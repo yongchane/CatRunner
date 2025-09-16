@@ -47,6 +47,7 @@ export function useImageLoader() {
       { name: "bulkcat2", src: "/bulkcat/bulkcat_run.svg" },
       { name: "bulkcat_jump", src: "/bulkcat/bulkcat_jump.svg" },
       { name: "bulkcat_sliding", src: "/bulkcat/bulkcat_slide.svg" },
+      { name: "transform_box", src: "/transform/box.svg" },
     ];
 
     // 장애물 이미지 목록

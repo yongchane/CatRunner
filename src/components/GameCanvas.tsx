@@ -145,8 +145,12 @@ export default function GameCanvas({
   } = useGameStateManager({
     onStageComplete,
     onRandomBoxTrigger: () => {
+      console.log("🎁 RandomBox triggered! Setting states...");
       setIsRandomBoxPhase(true);
       setShowRandomBox(true);
+      console.log(
+        "🎁 RandomBox states set: isRandomBoxPhase=true, showRandomBox=true"
+      );
     },
     lastRandomBoxStage,
     setLastRandomBoxStage,
@@ -257,6 +261,7 @@ export default function GameCanvas({
   useInputHandler({
     gamePhase,
     imagesLoaded,
+    isRandomBoxPhase, // RandomBox 상태 전달
     onStartGame: startGame,
     onJump: jump,
     onStartSlide: startSlide,
@@ -309,6 +314,19 @@ export default function GameCanvas({
     const gameStateData = gameStateRef.current;
 
     if (isRandomBoxPhase) {
+      // RandomBox 중에도 스프라이트 업데이트는 실행해야 함
+      console.log("🎁 In RandomBox phase, updating sprite to box...");
+
+      // Sprite updates (RandomBox 중에만 실행)
+      catState.sprite = "transform_box";
+      catState.size = { width: CAT_WIDTH, height: CAT_HEIGHT };
+      catState.position.y = GROUND_Y - 60;
+      catState.velocity.y = 0;
+      catState.isJumping = false;
+
+      // Cat 상태 업데이트
+      setCat({ ...catState });
+
       animationFrameId.current = requestAnimationFrame(gameLoop);
       return;
     }
@@ -348,7 +366,7 @@ export default function GameCanvas({
       }
     }
 
-    // Sprite updates
+    // Sprite updates (일반 게임 진행 중)
     if (currentCharacter === "bulkcat") {
       // BulkCat 스프라이트 처리
       if (isJumping) {
