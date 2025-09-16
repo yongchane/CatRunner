@@ -9,10 +9,10 @@ import { useInputHandler } from "./InputHandler";
 import { useGameRenderer } from "./GameRenderer";
 import { useImageLoader } from "./ImageLoader";
 
-const CANVAS_HEIGHT = 400;
+const CANVAS_HEIGHT = 500;
 const GROUND_Y = 300;
-const CAT_WIDTH = 100;
-const CAT_HEIGHT = 100;
+const CAT_WIDTH = 80;
+const CAT_HEIGHT = 80;
 const GRAVITY = 0.5;
 const JUMP_FORCE = -15;
 const SLIDE_DURATION = 500;
@@ -38,6 +38,11 @@ export default function GameCanvas({
   const [bulkcatRunFrame, setBulkcatRunFrame] = useState(0);
   const [bulkcatHitCount, setBulkcatHitCount] = useState(0);
   const [bulkcatIsImmune, setBulkcatIsImmune] = useState(false);
+  const [boomAnimationFrame, setBoomAnimationFrame] = useState(0);
+  const [boomAnimationStartTime, setBoomAnimationStartTime] = useState(0);
+  const [randomBoxPhase, setRandomBoxPhase] = useState<
+    "box" | "spinning" | "result"
+  >("box");
 
   // 캐릭터별 히트박스 설정
   const getCharacterHitbox = (
@@ -148,6 +153,8 @@ export default function GameCanvas({
       console.log("🎁 RandomBox triggered! Setting states...");
       setIsRandomBoxPhase(true);
       setShowRandomBox(true);
+      setBoomAnimationFrame(0);
+      setBoomAnimationStartTime(Date.now());
       console.log(
         "🎁 RandomBox states set: isRandomBoxPhase=true, showRandomBox=true"
       );
@@ -167,7 +174,7 @@ export default function GameCanvas({
     setCat((prev) => {
       if (prev.isJumping || prev.isSliding) return prev;
 
-      // bulkcat일 때는 점프력을 10% 감소
+      // bulkcat일 때는 점프력을 20% 감소
       const jumpForce =
         currentCharacter === "bulkcat" ? JUMP_FORCE * 0.8 : JUMP_FORCE;
 
@@ -315,12 +322,32 @@ export default function GameCanvas({
 
     if (isRandomBoxPhase) {
       // RandomBox 중에도 스프라이트 업데이트는 실행해야 함
-      console.log("🎁 In RandomBox phase, updating sprite to box...");
+      const currentTime = Date.now();
+      const elapsed = currentTime - boomAnimationStartTime;
+
+      // boom1 → boom2 → RandomBox phase에 따라 box 렌더링
+      let currentSprite = "transform_box";
+      if (elapsed < 300) {
+        currentSprite = "boom1";
+      } else if (elapsed < 600) {
+        currentSprite = "boom2";
+      } else {
+        // RandomBox가 "result" phase일 때만 box 렌더링
+        if (randomBoxPhase === "result") {
+          currentSprite = "box";
+        } else {
+          currentSprite = "box2";
+        }
+      }
+
+      console.log(
+        `🎁 In RandomBox phase, sprite: ${currentSprite}, elapsed: ${elapsed}ms`
+      );
 
       // Sprite updates (RandomBox 중에만 실행)
-      catState.sprite = "transform_box";
+      catState.sprite = currentSprite;
       catState.size = { width: CAT_WIDTH, height: CAT_HEIGHT };
-      catState.position.y = GROUND_Y - 60;
+      catState.position.y = GROUND_Y - 100;
       catState.velocity.y = 0;
       catState.isJumping = false;
 
@@ -460,6 +487,8 @@ export default function GameCanvas({
     animationFrameId.current = requestAnimationFrame(gameLoop);
   }, [
     isRandomBoxPhase,
+    randomBoxPhase,
+    boomAnimationStartTime,
     currentCharacter,
     bulkcatRunFrame,
     bulkcatHitCount,
@@ -544,6 +573,7 @@ export default function GameCanvas({
         onComplete={handleRandomBoxComplete}
         canvasWidth={canvasWidth}
         canvasHeight={CANVAS_HEIGHT}
+        onPhaseChange={setRandomBoxPhase}
       />
     </div>
   );

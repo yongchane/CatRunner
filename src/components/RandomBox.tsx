@@ -7,6 +7,7 @@ interface RandomBoxProps {
   onComplete: (selectedCharacter?: string) => void;
   canvasWidth: number;
   canvasHeight: number;
+  onPhaseChange?: (phase: "box" | "spinning" | "result") => void;
 }
 
 export default function RandomBox({
@@ -14,6 +15,7 @@ export default function RandomBox({
   onComplete,
   canvasWidth,
   canvasHeight,
+  onPhaseChange,
 }: RandomBoxProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -21,9 +23,21 @@ export default function RandomBox({
 
   // 능력치/캐릭터 목록
   const abilities = [
-    { name: "bulkcat", image: "/buff/bulkupmeet.png", description: "Strong Cat - 3 Lives!" },
-    { name: "cat", image: "/buff/churu.png", description: "Speed Cat - Fast Runner!" },
-    { name: "bcat", image: "/babycat/bcat.svg", description: "Baby Cat - Default!" }
+    {
+      name: "bulkcat",
+      image: "/buff/bulkupmeet.png",
+      description: "Strong Cat - 3 Lives!",
+    },
+    {
+      name: "cat",
+      image: "/buff/churu.png",
+      description: "Speed Cat - Fast Runner!",
+    },
+    {
+      name: "bcat",
+      image: "/babycat/bcat.svg",
+      description: "Baby Cat - Default!",
+    },
   ];
 
   // 3단계 애니메이션 효과
@@ -31,12 +45,14 @@ export default function RandomBox({
     if (isVisible && !isAnimating) {
       setIsAnimating(true);
       setPhase("box");
+      onPhaseChange?.("box");
       setSelectedImage("/transform/box.svg");
 
       // 1단계: Box 표시 (2초)
       setTimeout(() => {
         setPhase("spinning");
-        
+        onPhaseChange?.("spinning");
+
         // 2단계: 능력치 회전 (3초)
         let rotationCount = 0;
         const maxRotations = 20;
@@ -53,19 +69,20 @@ export default function RandomBox({
             const finalAbility = abilities[finalIndex];
             setSelectedImage(finalAbility.image);
             setPhase("result");
+            onPhaseChange?.("result");
 
             setTimeout(() => {
               setIsAnimating(false);
               setSelectedImage(null);
               setPhase("box");
-              
+
               onComplete(finalAbility.name);
-            }, 2000);
+            }, 1500);
           }
         };
 
         rotateAbilities();
-      }, 2000);
+      }, 1500);
     }
   }, [isVisible, isAnimating, onComplete, abilities]);
 
@@ -91,9 +108,11 @@ export default function RandomBox({
         }}
       >
         <h2 className="text-2xl font-bold mb-4 text-center text-gray-800">
-          {phase === "box" ? "🎁 TRANSFORMATION TIME! 🎁" : 
-           phase === "spinning" ? "✨ SELECTING ABILITY... ✨" : 
-           "🎊 TRANSFORMATION COMPLETE! 🎊"}
+          {phase === "box"
+            ? "🎁 TRANSFORMATION TIME! 🎁"
+            : phase === "spinning"
+            ? "✨ SELECTING ABILITY... ✨"
+            : "🎊 TRANSFORMATION COMPLETE! 🎊"}
         </h2>
 
         {phase === "spinning" && selectedImage && (
@@ -142,16 +161,21 @@ export default function RandomBox({
         )}
 
         <p className="text-sm text-gray-600 mt-4 text-center">
-          {phase === "box" ? "캐릭터가 변신 상자로 변했다!" : 
-           phase === "spinning" ? "능력치를 결정하는 중..." : 
-           "새로운 능력을 얻었다!"}
+          {phase === "box"
+            ? "캐릭터가 변신 상자로 변했다!"
+            : phase === "spinning"
+            ? "능력치를 결정하는 중..."
+            : "새로운 능력을 얻었다!"}
         </p>
 
         {phase === "result" && selectedImage && (
           <div className="mt-2 text-center">
-            {abilities.map(ability => 
+            {abilities.map((ability) =>
               ability.image === selectedImage ? (
-                <p key={ability.name} className="text-xs text-blue-600 font-semibold">
+                <p
+                  key={ability.name}
+                  className="text-xs text-blue-600 font-semibold"
+                >
                   {ability.description}
                 </p>
               ) : null
