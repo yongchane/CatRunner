@@ -135,7 +135,7 @@ export default function GameCanvas({
       position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
       velocity: { x: 0, y: 0 },
       size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-  collisionBox: getHitbox("bcat", false),
+      collisionBox: getHitbox("bcat", false),
       isJumping: false,
       isSliding: false,
       sprite: "bcat",
@@ -271,8 +271,8 @@ export default function GameCanvas({
     catState.velocity.y = newVelY;
     catState.isJumping = isJumping;
 
-    // BulkCat 애니메이션 프레임 업데이트 (store로 위임)
-    if (currentCharacter === "bulkcat") {
+    // 런 프레임 토글: bulkcat 전용이 아니라 모든 러닝 애니메이션용으로 주기적으로 토글
+    {
       const currentTime = Date.now();
       if (currentTime % 5 === 0) {
         toggleBulkcatRunFrame();
@@ -300,7 +300,13 @@ export default function GameCanvas({
       } else if (catState.isSliding) {
         catState.sprite = `${currentCharacter}_sliding`;
       } else {
-        catState.sprite = currentCharacter;
+        // 일부 캐릭터는 2프레임으로 달리기 애니메이션을 표현합니다.
+        // (예: `cat`은 `cat`과 `cat2` 스프라이트가 있으므로 번갈아 렌더링)
+        if (currentCharacter === "cat") {
+          catState.sprite = bulkcatRunFrameFromStore === 0 ? "cat" : "cat2";
+        } else {
+          catState.sprite = currentCharacter;
+        }
       }
       // 기본 크기
       catState.size = getSize(currentCharacter);

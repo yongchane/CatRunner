@@ -45,6 +45,7 @@ export function useImageLoader() {
       { name: "bcat_jump", src: "/babycat/bcat_jump.svg" },
       { name: "bcat_sliding", src: "/babycat/bcat_slide.svg" },
       { name: "cat", src: "/cat/cat.svg" },
+      { name: "cat2", src: "/cat/cat2.svg" },
       { name: "cat_jump", src: "/babycat/bcat_jump.svg" },
       { name: "cat_sliding", src: "/babycat/bcat_slide.svg" },
       { name: "bulkcat1", src: "/bulkcat/bulkcat.svg" },

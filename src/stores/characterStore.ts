@@ -39,19 +39,24 @@ export interface CharacterStore {
   setBulkcatImmune: (v: boolean) => void;
   resetBulkcat: () => void;
   setSize: (character: string, size: { width: number; height: number }) => void;
-  setHitbox: (character: string, variant: keyof CharacterHitboxes, hitbox: Hitbox) => void;
+  setHitbox: (
+    character: string,
+    variant: keyof CharacterHitboxes,
+    hitbox: Hitbox
+  ) => void;
 }
 
 // NOTE: CAT_WIDTH/CAT_HEIGHT are small constants; if not available, fallback
 const DEFAULT_W = typeof CAT_WIDTH === "number" ? CAT_WIDTH : 80;
 const DEFAULT_H = typeof CAT_HEIGHT === "number" ? CAT_HEIGHT : 80;
 
+// 캐릭터 크기, 히트박스 상태 관리 - 수정 필요
 export const useCharacterStore = create<CharacterStore>(
   (set: any, get: any) => ({
     currentCharacter: "bcat",
     sizes: {
       bcat: { width: DEFAULT_W, height: DEFAULT_H },
-      cat: { width: DEFAULT_W, height: DEFAULT_H },
+      cat: { width: Math.round(DEFAULT_W * 1.5), height: DEFAULT_H },
       bulkcat: {
         width: Math.round(DEFAULT_W * 1.5),
         height: Math.round(DEFAULT_H * 1.5),
@@ -74,8 +79,8 @@ export const useCharacterStore = create<CharacterStore>(
       },
       cat: {
         default: {
-          offset: { x: 20, y: 30 },
-          size: { width: DEFAULT_W - 30, height: DEFAULT_H - 35 },
+          offset: { x: 5, y: 5 },
+          size: { width: DEFAULT_W + 30, height: DEFAULT_H - 5 },
         },
         sliding: {
           offset: { x: 20, y: 30 },
