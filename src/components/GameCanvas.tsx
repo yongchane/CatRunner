@@ -8,6 +8,8 @@ import { useGameStateManager } from "./GameStateManager";
 import { useInputHandler } from "./InputHandler";
 import { useGameRenderer } from "./GameRenderer";
 import { useImageLoader } from "./ImageLoader";
+import { useCharacterStore, CharacterStore } from "@/stores/characterStore";
+import useCatController from "@/hooks/useCatController";
 
 const CANVAS_HEIGHT = 500;
 const GROUND_Y = 300;
@@ -31,109 +33,58 @@ export default function GameCanvas({
   const slideTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const [canvasWidth, setCanvasWidth] = useState<number>(0);
-  const [currentCharacter, setCurrentCharacter] = useState<string>("bcat");
+  // character state moved to zustand store
+  const currentCharacter = useCharacterStore(
+    (s: CharacterStore) => s.currentCharacter
+  );
+  const setCurrentCharacter = useCharacterStore(
+    (s: CharacterStore) => s.setCurrentCharacter
+  );
+  const bulkcatRunFrameFromStore = useCharacterStore(
+    (s: CharacterStore) => s.bulkcatRunFrame
+  );
+  const toggleBulkcatRunFrame = useCharacterStore(
+    (s: CharacterStore) => s.toggleBulkcatRunFrame
+  );
+  const incrementBulkcatHitCount = useCharacterStore(
+    (s: CharacterStore) => s.incrementBulkcatHitCount
+  );
+  const bulkcatIsImmuneFromStore = useCharacterStore(
+    (s: CharacterStore) => s.bulkcatIsImmune
+  );
+  const bulkcatHitCountFromStore = useCharacterStore(
+    (s: CharacterStore) => s.bulkcatHitCount
+  );
+  const resetBulkcat = useCharacterStore((s: CharacterStore) => s.resetBulkcat);
+  const setBulkcatImmune = useCharacterStore(
+    (s: CharacterStore) => s.setBulkcatImmune
+  );
   const [showRandomBox, setShowRandomBox] = useState(false);
   const [isRandomBoxPhase, setIsRandomBoxPhase] = useState(false);
   const [lastRandomBoxStage, setLastRandomBoxStage] = useState(0);
-  const [bulkcatRunFrame, setBulkcatRunFrame] = useState(0);
-  const [bulkcatHitCount, setBulkcatHitCount] = useState(0);
-  const [bulkcatIsImmune, setBulkcatIsImmune] = useState(false);
+  // local mirror states are no longer used; use store values via hooks
   const [boomAnimationFrame, setBoomAnimationFrame] = useState(0);
   const [boomAnimationStartTime, setBoomAnimationStartTime] = useState(0);
   const [randomBoxPhase, setRandomBoxPhase] = useState<
     "box" | "spinning" | "result"
   >("box");
 
-  // 캐릭터별 히트박스 설정
-  const getCharacterHitbox = (
-    character: string,
-    isSliding: boolean = false,
-    isJumping: boolean = false
-  ) => {
-    const baseHitbox = {
-      offset: { x: 5, y: 25 }, // 실제 고양이 몸체에 맞게
-      size: { width: CAT_WIDTH - 5, height: CAT_HEIGHT - 20 }, // 실제 몸체 크기
-    };
+  // 히트박스/사이즈는 스토어에서 관리한다 (CharacterSettings 컴포넌트로 조절 가능)
 
-    if (character === "bulkcat") {
-      const scaledWidth = CAT_WIDTH * 1.5;
-      const scaledHeight = CAT_HEIGHT * 1.5;
-      // 점프 중에는 히트박스를 더 좁고 위로 이동시켜 머리/몸 중심만 검사
-      if (isJumping) {
-        return {
-          offset: { x: 10, y: 15 },
-          size: {
-            width: scaledWidth - 10,
-            height: scaledHeight - 10,
-          },
-        };
-      } else if (isSliding) {
-        return {
-          offset: { x: 30, y: 55 },
-          size: {
-            width: scaledWidth - 40,
-            height: scaledHeight - 50,
-          },
-        };
-      }
-      return {
-        offset: { x: 7, y: 25 }, // 실제 고양이 몸체에 맞게 더 안쪽으로
-        size: {
-          width: isSliding ? scaledWidth - 10 : scaledWidth - 5, // 실제 몸체 크기에 맞춤
-          height: isSliding ? scaledHeight - 10 : scaledHeight - 20, // 머리부터 발까지만
-        },
-      };
-    } else if (character === "cat") {
-      if (isJumping) {
-        return {
-          offset: { x: 22, y: 12 },
-          size: {
-            width: CAT_WIDTH - 50,
-            height: CAT_HEIGHT - 60,
-          },
-        };
-      }
-      return {
-        offset: { x: 20, y: 30 }, // 실제 고양이 몸체에 맞게
-        size: {
-          width: isSliding ? CAT_WIDTH - 40 : CAT_WIDTH - 30,
-          height: isSliding ? CAT_HEIGHT - 45 : CAT_HEIGHT - 35,
-        },
-      };
-    }
-
-    // Default hitbox for bcat and sliding
-    if (isSliding) {
-      return {
-        offset: { x: 5, y: 50 }, // 슬라이딩 시 실제 몸체 위치에 맞춤
-        size: { width: CAT_WIDTH - 5, height: CAT_HEIGHT - 50 }, // 슬라이딩 몸체 크기
-      };
-    }
-
-    // 점프일 때 기본 히트박스 (bcat 같은 기본 캐릭터)
-    if (isJumping) {
-      return {
-        offset: { x: 25, y: 10 },
-        size: { width: CAT_WIDTH - 25, height: CAT_HEIGHT - 10 },
-      };
-    }
-
-    return baseHitbox;
-  };
-
-  // Cat state
-  const [cat, setCat] = useState<Cat>({
-    position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
-    velocity: { x: 0, y: 0 },
-    size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-    collisionBox: getCharacterHitbox("bcat"),
-    isJumping: false,
-    isSliding: false,
-    sprite: "bcat",
-  });
+  // Cat controller hook (state + actions extracted)
+  const {
+    cat,
+    setCat,
+    catRef,
+    jump,
+    startSlide,
+    endSlide,
+    resetCat,
+    getSize,
+    getHitbox,
+  } = useCatController();
 
   const [obstacles, setObstacles] = useState<Obstacle[]>([]);
-  const catRef = useRef(cat);
 
   // Initialize managers
   const { images, imagesLoaded, obstacleImages, obstacleImagesLoaded } =
@@ -169,68 +120,7 @@ export default function GameCanvas({
     canvasWidth,
   });
 
-  // Cat actions
-  const jump = useCallback(() => {
-    setCat((prev) => {
-      if (prev.isJumping || prev.isSliding) return prev;
-
-      // bulkcat일 때는 점프력을 20% 감소
-      const jumpForce =
-        currentCharacter === "bulkcat" ? JUMP_FORCE * 0.8 : JUMP_FORCE;
-
-      return {
-        ...prev,
-        velocity: { ...prev.velocity, y: jumpForce },
-        isJumping: true,
-        sprite:
-          currentCharacter === "bulkcat"
-            ? "bulkcat_jump"
-            : `${currentCharacter}_jump`,
-        collisionBox: getCharacterHitbox(currentCharacter, false, true),
-      };
-    });
-  }, [currentCharacter]);
-
-  const startSlide = useCallback(() => {
-    setCat((prev) => {
-      if (prev.isSliding) return prev;
-      let newY = prev.position.y;
-      let newVelY = prev.velocity.y;
-      let newIsJumping = prev.isJumping;
-
-      // bulkcat일 때는 1.5배 크기를 고려한 ground 위치 계산
-      const effectiveHeight =
-        currentCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
-      const groundLevel = GROUND_Y - effectiveHeight;
-
-      if (prev.position.y < groundLevel) {
-        newY = groundLevel;
-        newVelY = 0;
-        newIsJumping = false;
-      }
-      return {
-        ...prev,
-        position: { ...prev.position, y: newY },
-        velocity: { ...prev.velocity, y: newVelY },
-        isJumping: newIsJumping,
-        isSliding: true,
-        sprite:
-          currentCharacter === "bulkcat"
-            ? "bulkcat_sliding"
-            : `${currentCharacter}_sliding`,
-        collisionBox: getCharacterHitbox(currentCharacter, true),
-      };
-    });
-  }, [currentCharacter, getCharacterHitbox]);
-
-  const endSlide = useCallback(() => {
-    setCat((prev) => ({
-      ...prev,
-      isSliding: false,
-      sprite: currentCharacter === "bulkcat" ? "bulkcat1" : currentCharacter,
-      collisionBox: getCharacterHitbox(currentCharacter, false),
-    }));
-  }, [currentCharacter, getCharacterHitbox]);
+  // Cat actions are provided by useCatController: jump, startSlide, endSlide, resetCat
 
   const startGame = useCallback(() => {
     resetGameState(false);
@@ -239,15 +129,13 @@ export default function GameCanvas({
 
   const resetGame = useCallback(() => {
     setCurrentCharacter("bcat");
-    setBulkcatRunFrame(0);
-    setBulkcatHitCount(0);
-    setBulkcatIsImmune(false);
+    resetBulkcat();
 
     const initialCatState: Cat = {
       position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
       velocity: { x: 0, y: 0 },
       size: { width: CAT_WIDTH, height: CAT_HEIGHT },
-      collisionBox: getCharacterHitbox("bcat", false),
+  collisionBox: getHitbox("bcat", false),
       isJumping: false,
       isSliding: false,
       sprite: "bcat",
@@ -262,7 +150,7 @@ export default function GameCanvas({
     resetGameState();
 
     catRef.current = initialCatState;
-  }, [getCharacterHitbox, obstacleManager, resetGameState]);
+  }, [obstacleManager, resetGameState]);
 
   // Input handler
   useInputHandler({
@@ -290,9 +178,9 @@ export default function GameCanvas({
     obstacleImages,
     imagesLoaded,
     obstacleImagesLoaded,
-    isImmune: currentCharacter === "bulkcat" ? bulkcatIsImmune : false,
+    isImmune: currentCharacter === "bulkcat" ? bulkcatIsImmuneFromStore : false,
     currentCharacter,
-    bulkcatHitCount,
+    bulkcatHitCount: bulkcatHitCountFromStore,
   });
 
   // Sync cat ref
@@ -373,7 +261,7 @@ export default function GameCanvas({
       newVelY = 0;
       isJumping = false;
       // 착지 시 히트박스 복원
-      catState.collisionBox = getCharacterHitbox(
+      catState.collisionBox = getHitbox(
         currentCharacter,
         catState.isSliding,
         false
@@ -383,13 +271,11 @@ export default function GameCanvas({
     catState.velocity.y = newVelY;
     catState.isJumping = isJumping;
 
-    // BulkCat 애니메이션 프레임 업데이트 (1초마다)
+    // BulkCat 애니메이션 프레임 업데이트 (store로 위임)
     if (currentCharacter === "bulkcat") {
       const currentTime = Date.now();
       if (currentTime % 5 === 0) {
-        setBulkcatRunFrame((prev) => (prev === 0 ? 1 : 0));
-
-        console.log("BulkCat frame toggled to:", bulkcatRunFrame === 0 ? 1 : 0);
+        toggleBulkcatRunFrame();
       }
     }
 
@@ -402,10 +288,11 @@ export default function GameCanvas({
         catState.sprite = "bulkcat_sliding";
       } else {
         // 달리기 애니메이션
-        catState.sprite = bulkcatRunFrame === 0 ? "bulkcat1" : "bulkcat2";
+        catState.sprite =
+          bulkcatRunFrameFromStore === 0 ? "bulkcat1" : "bulkcat2";
       }
       // bulkcat 크기 조정
-      catState.size = { width: CAT_WIDTH * 1.5, height: CAT_HEIGHT * 1.5 };
+      catState.size = getSize("bulkcat");
     } else {
       // 일반 캐릭터 스프라이트 처리
       if (isJumping) {
@@ -416,7 +303,7 @@ export default function GameCanvas({
         catState.sprite = currentCharacter;
       }
       // 기본 크기
-      catState.size = { width: CAT_WIDTH, height: CAT_HEIGHT };
+      catState.size = getSize(currentCharacter);
     }
 
     // Update game state
@@ -428,10 +315,9 @@ export default function GameCanvas({
     // Check collisions
     const collidedObstacle = obstacleManager.checkAllCollisions(catState);
     if (collidedObstacle) {
-      if (currentCharacter === "bulkcat" && !bulkcatIsImmune) {
+      if (currentCharacter === "bulkcat" && !bulkcatIsImmuneFromStore) {
         // BulkCat 충돌 처리 (3번까지 허용)
-        const newHitCount = bulkcatHitCount + 1;
-        setBulkcatHitCount(newHitCount);
+        const newHitCount = incrementBulkcatHitCount();
 
         if (newHitCount >= 3) {
           // 3번째 충돌 - 게임오버
@@ -440,7 +326,7 @@ export default function GameCanvas({
           return;
         } else {
           // 1~2번째 충돌 - 잠시 면역 상태 (0.5초)
-          setBulkcatIsImmune(true);
+          setBulkcatImmune(true);
           console.log(
             `🔥 BulkCat collision ${newHitCount}/3! Hearts remaining: ${
               3 - newHitCount
@@ -456,7 +342,7 @@ export default function GameCanvas({
 
           // 0.5초 후 면역 해제 (너무 짧은 간격 충돌 방지)
           setTimeout(() => {
-            setBulkcatIsImmune(false);
+            setBulkcatImmune(false);
             console.log("BulkCat immunity ended");
           }, 500);
 
@@ -466,7 +352,7 @@ export default function GameCanvas({
           animationFrameId.current = requestAnimationFrame(gameLoop);
           return;
         }
-      } else if (currentCharacter === "bulkcat" && bulkcatIsImmune) {
+      } else if (currentCharacter === "bulkcat" && bulkcatIsImmuneFromStore) {
         // 면역 상태일 때는 충돌 무시
         setCat({ ...catState });
         setObstacles(obstacleManager.getObstacles());
@@ -490,9 +376,9 @@ export default function GameCanvas({
     randomBoxPhase,
     boomAnimationStartTime,
     currentCharacter,
-    bulkcatRunFrame,
-    bulkcatHitCount,
-    bulkcatIsImmune,
+    bulkcatRunFrameFromStore,
+    bulkcatHitCountFromStore,
+    bulkcatIsImmuneFromStore,
     updateGameState,
     obstacleManager,
     endGame,
@@ -521,15 +407,11 @@ export default function GameCanvas({
       // 캐릭터별 상태 초기화
       if (selectedCharacter === "bulkcat") {
         // BulkCat 선택 시 무적 상태 초기화
-        setBulkcatHitCount(0);
-        setBulkcatIsImmune(false);
-        setBulkcatRunFrame(0);
+        resetBulkcat();
         console.log("BulkCat selected! Collision immunity reset to 3 hits");
       } else {
         // 다른 캐릭터 선택 시 BulkCat 상태 리셋
-        setBulkcatHitCount(0);
-        setBulkcatIsImmune(false);
-        setBulkcatRunFrame(0);
+        resetBulkcat();
       }
 
       setCat((prev) => {
@@ -549,7 +431,7 @@ export default function GameCanvas({
             selectedCharacter === "bulkcat"
               ? { width: CAT_WIDTH * 1.5, height: CAT_HEIGHT * 1.5 }
               : { width: CAT_WIDTH, height: CAT_HEIGHT },
-          collisionBox: getCharacterHitbox(selectedCharacter, prev.isSliding),
+          collisionBox: getHitbox(selectedCharacter, prev.isSliding),
         };
       });
     }
