@@ -25,12 +25,12 @@ export default function RandomBox({
   const abilities = [
     {
       name: "bulkcat",
-      image: "/buff/bulkupmeet.png",
+      image: "/buff/bulkupmeet.svg",
       description: "Strong Cat - 3 Lives!",
     },
     {
       name: "cat",
-      image: "/buff/churu.png",
+      image: "/buff/churu.svg",
       description: "Speed Cat - Fast Runner!",
     },
     {
