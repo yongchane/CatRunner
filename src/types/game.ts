@@ -21,8 +21,10 @@ export interface Cat {
   velocity: Position;
   size: Size;
   collisionBox: {
-    offset: Position; // Offset from position to actual collision box
-    size: Size;       // Actual collision box size
+  offset: Position; // Offset from position to actual collision box
+  size: Size;       // Actual collision box size
+  // optional shape hint for collision tests
+  shape?: 'rect' | 'ellipse';
   };
   isJumping: boolean;
   isSliding: boolean;

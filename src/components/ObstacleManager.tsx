@@ -26,12 +26,42 @@ export function useObstacleManager({
       const catCollisionWidth = cat.collisionBox.size.width;
       const catCollisionHeight = cat.collisionBox.size.height;
 
-      return (
-        catCollisionX < obstacle.position.x + obstacle.size.width &&
-        catCollisionX + catCollisionWidth > obstacle.position.x &&
-        catCollisionY < obstacle.position.y + obstacle.size.height &&
-        catCollisionY + catCollisionHeight > obstacle.position.y
-      );
+      // If the cat's hitbox is ellipse-shaped, perform ellipse-rect intersection test
+      const catHitboxAny: any = (cat as any).collisionBox;
+      const isEllipse = catHitboxAny.shape === "ellipse";
+
+      if (!isEllipse) {
+        // rectangle-rectangle AABB check (existing behavior)
+        return (
+          catCollisionX < obstacle.position.x + obstacle.size.width &&
+          catCollisionX + catCollisionWidth > obstacle.position.x &&
+          catCollisionY < obstacle.position.y + obstacle.size.height &&
+          catCollisionY + catCollisionHeight > obstacle.position.y
+        );
+      }
+
+      // Ellipse vs Rect intersection test (approx): transform coordinates so ellipse is centered at origin,
+      // scale to unit circle, then find closest point on rectangle to the circle and test distance.
+      const rx = catCollisionX + catCollisionWidth / 2; // ellipse center x
+      const ry = catCollisionY + catCollisionHeight / 2; // ellipse center y
+      const a = catCollisionWidth / 2; // ellipse radius x
+      const b = catCollisionHeight / 2; // ellipse radius y
+
+      // Rectangle bounds
+      const rectLeft = obstacle.position.x;
+      const rectTop = obstacle.position.y;
+      const rectRight = obstacle.position.x + obstacle.size.width;
+      const rectBottom = obstacle.position.y + obstacle.size.height;
+
+      // Find closest point (cx,cy) on rectangle to ellipse center
+      const cx = Math.max(rectLeft, Math.min(rx, rectRight));
+      const cy = Math.max(rectTop, Math.min(ry, rectBottom));
+
+      // Compute normalized distance from ellipse center to closest point
+      const nx = (cx - rx) / a;
+      const ny = (cy - ry) / b;
+
+      return nx * nx + ny * ny <= 1;
     },
     []
   );

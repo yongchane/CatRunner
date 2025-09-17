@@ -16,7 +16,7 @@ export function useCatController() {
   const [cat, setCat] = useState<Cat>({
     position: { x: 50, y: CANVAS_GROUND_Y - CAT_HEIGHT },
     velocity: { x: 0, y: 0 },
-    size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+    size: getSize("bcat", false, false),
     collisionBox: getHitbox("bcat"),
     isJumping: false,
     isSliding: false,
@@ -73,6 +73,7 @@ export function useCatController() {
             ? "bulkcat_sliding"
             : `${currentCharacter}_sliding`,
         collisionBox: getHitbox(currentCharacter, true),
+        size: getSize(currentCharacter, true, false),
       };
     });
   }, [currentCharacter, getHitbox]);
@@ -83,6 +84,7 @@ export function useCatController() {
       isSliding: false,
       sprite: currentCharacter === "bulkcat" ? "bulkcat1" : currentCharacter,
       collisionBox: getHitbox(currentCharacter, false),
+      size: getSize(currentCharacter, false, false),
     }));
   }, [currentCharacter, getHitbox]);
 
@@ -90,7 +92,7 @@ export function useCatController() {
     const initialCatState: Cat = {
       position: { x: 50, y: CANVAS_GROUND_Y - CAT_HEIGHT },
       velocity: { x: 0, y: 0 },
-      size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+      size: getSize("bcat", false, false),
       collisionBox: getHitbox("bcat", false),
       isJumping: false,
       isSliding: false,

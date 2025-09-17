@@ -7,6 +7,8 @@ type Offset = { x: number; y: number };
 export type Hitbox = {
   offset: Offset;
   size: { width: number; height: number };
+  // optional shape: 'rect' (default) or 'ellipse' (treat size as bounding box)
+  shape?: "rect" | "ellipse";
 };
 
 interface CharacterHitboxes {
@@ -17,7 +19,8 @@ interface CharacterHitboxes {
 
 export interface CharacterStore {
   currentCharacter: string;
-  sizes: Record<string, { width: number; height: number }>;
+  // sizes may include variant entries (sliding/jumping) so keep flexible type
+  sizes: Record<string, any>;
   hitboxes: Record<string, CharacterHitboxes>;
 
   // bulkcat specific
@@ -32,7 +35,11 @@ export interface CharacterStore {
     isSliding?: boolean,
     isJumping?: boolean
   ) => Hitbox;
-  getSize: (character: string) => { width: number; height: number };
+  getSize: (
+    character: string,
+    isSliding?: boolean,
+    isJumping?: boolean
+  ) => { width: number; height: number };
 
   toggleBulkcatRunFrame: () => void;
   incrementBulkcatHitCount: () => number;
@@ -53,10 +60,17 @@ const DEFAULT_H = typeof CAT_HEIGHT === "number" ? CAT_HEIGHT : 80;
 // 캐릭터 크기, 히트박스 상태 관리 - 수정 필요
 export const useCharacterStore = create<CharacterStore>(
   (set: any, get: any) => ({
-    currentCharacter: "bcat",
+    currentCharacter: "cat",
     sizes: {
       bcat: { width: DEFAULT_W, height: DEFAULT_H },
-      cat: { width: Math.round(DEFAULT_W * 1.5), height: DEFAULT_H },
+      cat: {
+        sliding: {
+          width: DEFAULT_W + 30,
+          height: 40,
+        },
+        width: Math.round(DEFAULT_W * 1.5),
+        height: DEFAULT_H,
+      },
       bulkcat: {
         width: Math.round(DEFAULT_W * 1.5),
         height: Math.round(DEFAULT_H * 1.5),
@@ -83,12 +97,13 @@ export const useCharacterStore = create<CharacterStore>(
           size: { width: DEFAULT_W + 30, height: DEFAULT_H - 5 },
         },
         sliding: {
-          offset: { x: 20, y: 30 },
-          size: { width: DEFAULT_W - 40, height: DEFAULT_H - 45 },
+          offset: { x: 5, y: 5 },
+          size: { width: DEFAULT_W + 25, height: DEFAULT_H - 50 },
         },
         jumping: {
-          offset: { x: 22, y: 12 },
-          size: { width: DEFAULT_W - 50, height: DEFAULT_H - 60 },
+          offset: { x: 5, y: 5 },
+          size: { width: DEFAULT_W + 25, height: DEFAULT_H - 15 },
+          shape: "ellipse",
         },
       },
       bulkcat: {
@@ -129,8 +144,39 @@ export const useCharacterStore = create<CharacterStore>(
       return hb.default;
     },
 
-    getSize: (character: string) => {
-      return get().sizes[character] || get().sizes.bcat;
+    getSize: (character: string, isSliding = false, isJumping = false) => {
+      const sizes = get().sizes || {};
+      const entry = sizes[character];
+      if (!entry) return sizes.bcat || { width: DEFAULT_W, height: DEFAULT_H };
+
+      // If entry contains variant objects (sliding/jumping), prefer them when flags set
+      if (
+        isJumping &&
+        entry.jumping &&
+        entry.jumping.width &&
+        entry.jumping.height
+      ) {
+        return { width: entry.jumping.width, height: entry.jumping.height };
+      }
+      if (
+        isSliding &&
+        entry.sliding &&
+        entry.sliding.width &&
+        entry.sliding.height
+      ) {
+        return { width: entry.sliding.width, height: entry.sliding.height };
+      }
+
+      // Fallback to top-level width/height
+      if (entry.width && entry.height)
+        return { width: entry.width, height: entry.height };
+
+      // If entry itself is a size object (no variants)
+      if (typeof entry.width === "number" && typeof entry.height === "number") {
+        return { width: entry.width, height: entry.height };
+      }
+
+      return sizes.bcat || { width: DEFAULT_W, height: DEFAULT_H };
     },
 
     toggleBulkcatRunFrame: () =>

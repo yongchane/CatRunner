@@ -134,7 +134,7 @@ export default function GameCanvas({
     const initialCatState: Cat = {
       position: { x: 50, y: GROUND_Y - CAT_HEIGHT },
       velocity: { x: 0, y: 0 },
-      size: { width: CAT_WIDTH, height: CAT_HEIGHT },
+      size: getSize("bcat", false, false),
       collisionBox: getHitbox("bcat", false),
       isJumping: false,
       isSliding: false,
@@ -251,10 +251,13 @@ export default function GameCanvas({
     let newVelY = catState.velocity.y + GRAVITY;
     let isJumping = catState.isJumping;
 
-    // bulkcat일 때는 1.5배 크기를 고려한 ground 위치 계산
-    const effectiveHeight =
-      currentCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
-    const groundLevel = GROUND_Y - effectiveHeight;
+    // 현재 캐릭터의 실제 렌더링 높이에서 그라운드 위치(ground-level)를 계산
+    const currentSize = getSize(
+      currentCharacter,
+      catState.isSliding,
+      isJumping
+    );
+    const groundLevel = GROUND_Y - currentSize.height;
 
     if (newY >= groundLevel) {
       newY = groundLevel;
@@ -292,7 +295,7 @@ export default function GameCanvas({
           bulkcatRunFrameFromStore === 0 ? "bulkcat1" : "bulkcat2";
       }
       // bulkcat 크기 조정
-      catState.size = getSize("bulkcat");
+      catState.size = getSize("bulkcat", catState.isSliding, isJumping);
     } else {
       // 일반 캐릭터 스프라이트 처리
       if (isJumping) {
@@ -308,8 +311,8 @@ export default function GameCanvas({
           catState.sprite = currentCharacter;
         }
       }
-      // 기본 크기
-      catState.size = getSize(currentCharacter);
+      // 기본 크기 (슬라이드/점프 변형 여부 전달)
+      catState.size = getSize(currentCharacter, catState.isSliding, isJumping);
     }
 
     // Update game state
@@ -421,10 +424,9 @@ export default function GameCanvas({
       }
 
       setCat((prev) => {
-        // bulkcat일 때는 올바른 ground 위치 계산
-        const effectiveHeight =
-          selectedCharacter === "bulkcat" ? CAT_HEIGHT * 1.5 : CAT_HEIGHT;
-        const groundLevel = GROUND_Y - effectiveHeight;
+        // 선택된 캐릭터의 현재 사이즈를 기준으로 올바른 ground 위치 계산
+        const selectedSize = getSize(selectedCharacter, prev.isSliding, false);
+        const groundLevel = GROUND_Y - selectedSize.height;
         const newY =
           prev.position.y > groundLevel ? groundLevel : prev.position.y;
 
@@ -433,10 +435,7 @@ export default function GameCanvas({
           position: { ...prev.position, y: newY },
           sprite:
             selectedCharacter === "bulkcat" ? "bulkcat1" : selectedCharacter,
-          size:
-            selectedCharacter === "bulkcat"
-              ? { width: CAT_WIDTH * 1.5, height: CAT_HEIGHT * 1.5 }
-              : { width: CAT_WIDTH, height: CAT_HEIGHT },
+          size: getSize(selectedCharacter, prev.isSliding, false),
           collisionBox: getHitbox(selectedCharacter, prev.isSliding),
         };
       });
